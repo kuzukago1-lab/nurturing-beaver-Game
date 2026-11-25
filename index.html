@@ -860,6 +860,7 @@
       doc,
       getDoc,
       setDoc,
+      deleteDoc,
       collection,
       query,
       where,
@@ -903,6 +904,7 @@
       doc: doc,
       getDoc: getDoc,
       setDoc: setDoc,
+      deleteDoc: deleteDoc,
       collection: collection,
       query: query,
       where: where,
@@ -1460,8 +1462,13 @@
                   (targetData.guestbook || []).forEach((item) => {
                     if (item && item.id) map.set(item.id, item);
                   });
+                  let giftedWoodTotal = 0;
                   gbSnap.forEach((docSnap) => {
                     const d = docSnap.data() || {};
+                    const wAmt = d.action === 'gift_wood' ? Math.max(1, Number(d.woodAmount) || 1) : 0;
+                    if (wAmt > 0 && !d.woodClaimed) {
+                      giftedWoodTotal += wAmt;
+                    }
                     map.set(docSnap.id, {
                       id: docSnap.id,
                       visitorName: d.visitorName || 'ななしの訪問者',
@@ -1471,6 +1478,20 @@
                       timestamp: Number(d.timestamp || Date.now())
                     });
                   });
+                  if (giftedWoodTotal > 0) {
+                    targetData.user = {
+                      ...(targetData.user || {}),
+                      wood: Number((targetData.user && targetData.user.wood) || 0) + giftedWoodTotal
+                    };
+                    await Promise.all(
+                      gbSnap.docs
+                        .filter((docSnap) => {
+                          const d = docSnap.data() || {};
+                          return d.action === 'gift_wood' && !d.woodClaimed;
+                        })
+                        .map((docSnap) => fb.setDoc(docSnap.ref, { woodClaimed: true }, { merge: true }))
+                    );
+                  }
                   targetData.guestbook = Array.from(map.values())
                     .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
                     .slice(0, 50);
@@ -1539,6 +1560,7 @@
                 damProgress: data.beaver.damProgress,
                 hunger: data.beaver.hunger,
                 mood: data.beaver.mood,
+                wood: data.user.wood,
                 color: data.beaver.color,
                 bodyStyle: data.beaver.bodyStyle,
                 registered: Boolean(data.registered),
@@ -1564,7 +1586,42 @@
           fresh.user.uid = this.uid;
           fresh.user.accountId = await this.reserveUniqueAccountId(null, this.uid);
         }
-        await this.saveGameData(fresh);
+        const fb = this.getFb();
+        const targetUid = this.uid || fresh.user.uid;
+        if (fb && targetUid && this.onlineConnected) {
+          try {
+            const gbSnap = await fb.getDocs(fb.collection(fb.db, 'players', targetUid, 'guestbook'));
+            if (gbSnap && !gbSnap.empty && typeof fb.deleteDoc === 'function') {
+              await Promise.all(gbSnap.docs.map((d) => fb.deleteDoc(d.ref)));
+            }
+            await fb.setDoc(fb.doc(fb.db, 'players', targetUid), {
+              ...fresh,
+              publicProfile: {
+                uid: targetUid,
+                accountId: fresh.user.accountId,
+                ownerName: fresh.user.ownerName,
+                beaverName: fresh.beaver.name,
+                damLevel: fresh.beaver.damLevel,
+                damProgress: fresh.beaver.damProgress,
+                hunger: fresh.beaver.hunger,
+                mood: fresh.beaver.mood,
+                wood: fresh.user.wood,
+                color: fresh.beaver.color,
+                bodyStyle: fresh.beaver.bodyStyle,
+                registered: false,
+                updatedAt: Date.now()
+              },
+              serverUpdatedAt: fb.serverTimestamp()
+            });
+          } catch (err) {
+            console.warn('オンラインデータの完全リセットに失敗:', err);
+          }
+        }
+        try {
+          localStorage.setItem(this.storageKey, JSON.stringify(fresh));
+        } catch (e) {
+          console.error('ローカル初期化データの保存に失敗:', e);
+        }
         return fresh;
       }
 
@@ -1652,6 +1709,7 @@
               damProgress: Number(prof.damProgress ?? beaverObj.damProgress ?? 0),
               hunger: Number(prof.hunger ?? beaverObj.hunger ?? 20),
               mood: Number(prof.mood ?? beaverObj.mood ?? 80),
+              wood: Number(prof.wood ?? userObj.wood ?? 0),
               color: prof.color || beaverObj.color || '#9a5b25',
               bodyStyle: prof.bodyStyle || beaverObj.bodyStyle || null,
               comment: 'オンライン川辺で活動中！',
@@ -1665,25 +1723,49 @@
         }
       }
 
-      async sendVisitInteraction(neighborUid, actionType, senderName) {
+      async sendVisitInteraction(neighborUid, actionType, senderName, woodAmount = 0) {
         const fb = this.getFb();
         if (fb && this.onlineConnected && neighborUid && !neighborUid.startsWith('neighbor_')) {
           try {
+            const safeWood = actionType === 'gift_wood' ? Math.max(1, Number(woodAmount) || 1) : 0;
             await fb.addDoc(fb.collection(fb.db, 'players', neighborUid, 'guestbook'), {
               visitorUid: this.uid || 'anonymous',
               visitorName: senderName || '旅人',
               action: actionType,
+              woodAmount: safeWood,
               message: actionType === 'gift_wood'
-                ? `${senderName || '旅人'}さんが流木をおすそわけしてくれました！`
+                ? `${senderName || '旅人'}さんが流木を${safeWood}本おすそわけしてくれました！`
                 : `${senderName || '旅人'}さんがビーバーをなでなでしてくれました♪`,
               timestamp: Date.now(),
               createdAt: fb.serverTimestamp()
             });
+
+            if (safeWood > 0) {
+              const targetRef = fb.doc(fb.db, 'players', neighborUid);
+              await fb.runTransaction(fb.db, async (tx) => {
+                const snap = await tx.get(targetRef);
+                if (!snap.exists()) return;
+                const data = snap.data() || {};
+                const curUserWood = Number((data.user && data.user.wood) ?? (data.publicProfile && data.publicProfile.wood) ?? 0);
+                const nextWood = curUserWood + safeWood;
+                tx.set(targetRef, {
+                  user: {
+                    ...(data.user || {}),
+                    wood: nextWood
+                  },
+                  publicProfile: {
+                    ...(data.publicProfile || {}),
+                    wood: nextWood,
+                    updatedAt: Date.now()
+                  }
+                }, { merge: true });
+              });
+            }
           } catch (err) {
-            console.warn('訪問ログ送信に失敗:', err);
+            console.warn('訪問ログ・おすそわけ送信に失敗:', err);
           }
         }
-        return { success: true, neighborUid, actionType, senderName };
+        return { success: true, neighborUid, actionType, senderName, woodAmount };
       }
     }
 
@@ -2748,8 +2830,9 @@
         this.state.user.wood -= 1;
         this.state.user.coins += 8;
         this.visitingTarget.visitedToday = true;
+        this.visitingTarget.wood = Number(this.visitingTarget.wood || 0) + 1;
 
-        await this.storage.sendVisitInteraction(this.visitingTarget.uid, 'gift_wood', this.state.user.ownerName);
+        await this.storage.sendVisitInteraction(this.visitingTarget.uid, 'gift_wood', this.state.user.ownerName, 1);
         await this.storage.saveGameData(this.state);
 
         this.triggerBeaverAction('happy', 120);
@@ -2757,7 +2840,7 @@
         this.sound.playChime();
         this.updateUI();
         this.renderNeighbors();
-        this.showToast('流木をプレゼントした！お礼にツヤツヤのどんぐり +8');
+        this.showToast(`${this.visitingTarget.ownerName}さんに流木を1本おすそわけ！（相手流木+1 / どんぐり+8）`);
       }
 
       triggerBeaverAction(action, durationFrames) {
