@@ -1468,27 +1468,48 @@
                 if (gbSnap && !gbSnap.empty) {
                   const map = new Map();
                   (targetData.guestbook || []).forEach((item) => {
-                    if (item && item.id) map.set(item.id, item);
+                    if (item && item.id) map.set(item.id, { ...item });
                   });
                   const claimedSet = new Set(
                     Array.isArray(targetData.claimedGiftIds) ? targetData.claimedGiftIds : []
                   );
                   let giftedWoodTotal = 0;
-                  const docsToMarkClaimed = [];
 
-                  gbSnap.forEach((docSnap) => {
-                    const d = docSnap.data() || {};
+                  for (const docSnap of gbSnap.docs) {
                     const docId = docSnap.id;
                     const existingEntry = map.get(docId) || {};
-                    const isAlreadyClaimed = Boolean(
+                    let d = docSnap.data() || {};
+                    let wAmt = d.action === 'gift_wood' ? Math.max(1, Number(d.woodAmount) || 1) : 0;
+                    let isAlreadyClaimed = Boolean(
                       d.woodClaimed || d.claimed || existingEntry.claimed || claimedSet.has(docId)
                     );
-                    const wAmt = d.action === 'gift_wood' ? Math.max(1, Number(d.woodAmount) || 1) : 0;
 
-                    if (wAmt > 0 && !isAlreadyClaimed) {
+                    if (wAmt > 0 && !isAlreadyClaimed && typeof fb.runTransaction === 'function') {
+                      const txRes = await fb.runTransaction(fb.db, async (tx) => {
+                        const freshSnap = await tx.get(docSnap.ref);
+                        if (!freshSnap.exists()) return { granted: 0, already: true };
+                        const fd = freshSnap.data() || {};
+                        const amt = fd.action === 'gift_wood' ? Math.max(1, Number(fd.woodAmount) || 1) : 0;
+                        if (amt <= 0) return { granted: 0, already: true };
+                        if (fd.woodClaimed || fd.claimed) {
+                          return { granted: 0, already: true };
+                        }
+                        tx.set(docSnap.ref, { woodClaimed: true, claimed: true }, { merge: true });
+                        return { granted: amt, already: false };
+                      });
+                      if (txRes && txRes.granted > 0) {
+                        giftedWoodTotal += txRes.granted;
+                        isAlreadyClaimed = true;
+                        claimedSet.add(docId);
+                      } else {
+                        isAlreadyClaimed = true;
+                        claimedSet.add(docId);
+                      }
+                    } else if (wAmt > 0 && !isAlreadyClaimed) {
                       giftedWoodTotal += wAmt;
+                      isAlreadyClaimed = true;
                       claimedSet.add(docId);
-                      docsToMarkClaimed.push(docSnap.ref);
+                      await fb.setDoc(docSnap.ref, { woodClaimed: true, claimed: true }, { merge: true });
                     } else if (wAmt > 0) {
                       claimedSet.add(docId);
                     }
@@ -1503,7 +1524,7 @@
                       message: d.message || existingEntry.message || '遊びに来たよ！',
                       timestamp: Number(d.timestamp || existingEntry.timestamp || Date.now())
                     });
-                  });
+                  }
 
                   targetData.claimedGiftIds = Array.from(claimedSet).slice(-200);
 
@@ -1512,13 +1533,6 @@
                       ...(targetData.user || {}),
                       wood: Number((targetData.user && targetData.user.wood) || 0) + giftedWoodTotal
                     };
-                    if (docsToMarkClaimed.length > 0) {
-                      await Promise.all(
-                        docsToMarkClaimed.map((ref) =>
-                          fb.setDoc(ref, { woodClaimed: true, claimed: true }, { merge: true })
-                        )
-                      );
-                    }
                   }
                   targetData.guestbook = Array.from(map.values())
                     .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
@@ -2071,28 +2085,46 @@
                   }
 
                   if (action === 'gift_wood' && !alreadyClaimed) {
-                    const woodAmt = Math.max(1, Number(d.woodAmount) || 1);
-                    this.state.user.wood = Number(this.state.user.wood || 0) + woodAmt;
-                    claimedSet.add(docId);
-                    receivedGiftCount += woodAmt;
-                    latestGiftSummary = `${visitorName}さんから流木+${woodAmt}本のお裾分けを頂きました`;
+                    const candidateAmt = Math.max(1, Number(d.woodAmount) || 1);
+                    let grantedAmt = 0;
+                    if (typeof fb.runTransaction === 'function') {
+                      const txOut = await fb.runTransaction(fb.db, async (tx) => {
+                        const freshSnap = await tx.get(docSnap.ref);
+                        if (!freshSnap.exists()) return { granted: 0 };
+                        const fd = freshSnap.data() || {};
+                        if (fd.woodClaimed || fd.claimed) return { granted: 0 };
+                        const amt = fd.action === 'gift_wood' ? Math.max(1, Number(fd.woodAmount) || 1) : 0;
+                        if (amt <= 0) return { granted: 0 };
+                        tx.set(docSnap.ref, { woodClaimed: true, claimed: true }, { merge: true });
+                        return { granted: amt };
+                      });
+                      grantedAmt = (txOut && txOut.granted) || 0;
+                    } else {
+                      await fb.setDoc(docSnap.ref, { woodClaimed: true, claimed: true }, { merge: true });
+                      grantedAmt = candidateAmt;
+                    }
 
+                    claimedSet.add(docId);
                     const curItem = guestbookMap.get(docId);
                     if (curItem) {
                       curItem.claimed = true;
                     }
 
-                    const claimLogId = `claim_gb_${docId}`;
-                    if (!existingLogIds.has(claimLogId)) {
-                      this.addActivityLog(
-                        `お裾分け自動受取：${visitorName}さんから流木+${woodAmt}本を受け取りました！`,
-                        '#ico-gift',
-                        ts
-                      );
-                      existingLogIds.add(claimLogId);
-                    }
+                    if (grantedAmt > 0) {
+                      this.state.user.wood = Number(this.state.user.wood || 0) + grantedAmt;
+                      receivedGiftCount += grantedAmt;
+                      latestGiftSummary = `${visitorName}さんから流木+${grantedAmt}本のお裾分けを頂きました`;
 
-                    await fb.setDoc(docSnap.ref, { woodClaimed: true, claimed: true }, { merge: true });
+                      const claimLogId = `claim_gb_${docId}`;
+                      if (!existingLogIds.has(claimLogId)) {
+                        this.addActivityLog(
+                          `お裾分け自動受取：${visitorName}さんから流木+${grantedAmt}本を受け取りました！`,
+                          '#ico-gift',
+                          ts
+                        );
+                        existingLogIds.add(claimLogId);
+                      }
+                    }
                     changed = true;
                   } else if (action === 'gift_wood') {
                     claimedSet.add(docId);
