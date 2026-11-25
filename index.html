@@ -81,6 +81,14 @@
   </style>
 </head>
 <body class="min-h-screen flex flex-col items-center justify-between bg-gradient-to-b from-emerald-100 via-amber-50 to-orange-100 p-2 sm:p-4">
+  <!-- 読込中オーバーレイ -->
+  <div id="loading-screen-overlay" class="fixed inset-0 z-[60] flex items-center justify-center bg-emerald-950/35 backdrop-blur-xs transition-opacity duration-300">
+    <div class="bg-white/95 border-4 border-amber-300 rounded-3xl px-7 py-5 shadow-2xl flex flex-col items-center gap-3 text-center">
+      <div class="w-11 h-11 rounded-full border-4 border-amber-200 border-t-emerald-500 animate-spin"></div>
+      <p id="loading-screen-text" class="text-base sm:text-lg font-extrabold text-amber-950 tracking-wide">読込中。。。</p>
+    </div>
+  </div>
+
 
   <!-- 画面拡大・縮小コントローラー（常時右下に配置） -->
   <div id="ui-zoom-controls" class="fixed bottom-4 right-3 sm:right-5 z-20 flex items-center gap-1 bg-white/95 backdrop-blur px-2 py-1.5 rounded-2xl shadow-lg border-2 border-amber-300">
@@ -1895,6 +1903,9 @@
         this.bindEvents();
         this.syncStartScreenState();
         this.syncTopPageState();
+        await this.autoReceiveGiftsAndLogVisitors(true);
+        await this.storage.saveGameData(this.state);
+
         this.updateUI();
         this.renderActivityLogs();
         this.renderNeighbors();
@@ -1910,6 +1921,10 @@
           if (clockChanged) {
             this.updateTimeOfDayUI();
           }
+          const giftChanged = await this.autoReceiveGiftsAndLogVisitors(true);
+          if (giftChanged) {
+            await this.storage.saveGameData(this.state);
+          }
           this.updateStaminaUI();
         }, 1000);
 
@@ -1920,6 +1935,177 @@
         });
 
         requestAnimationFrame(() => this.loop());
+      }
+
+
+      setLoadingState(isLoading, text = '読込中。。。') {
+        const overlay = document.getElementById('loading-screen-overlay');
+        const labelEl = document.getElementById('loading-screen-text');
+        if (labelEl && text) {
+          labelEl.textContent = text;
+        }
+        if (!overlay) return;
+        if (isLoading) {
+          overlay.classList.remove('hidden');
+          overlay.style.opacity = '1';
+        } else {
+          overlay.style.opacity = '0';
+          setTimeout(() => {
+            overlay.classList.add('hidden');
+          }, 260);
+        }
+      }
+
+      showGiftReceivedBanner(message = 'お裾分けを頂きました', durationMs = 3500) {
+        const container = document.getElementById('toast-container');
+        if (!container) return;
+        const banner = document.createElement('div');
+        banner.className = 'toast-anim max-w-full sm:max-w-lg bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 text-white px-5 py-2.5 rounded-2xl sm:rounded-full text-xs sm:text-sm font-extrabold shadow-xl border-2 border-amber-200 text-center break-words leading-snug';
+        banner.textContent = message;
+        container.appendChild(banner);
+
+        setTimeout(() => {
+          banner.style.opacity = '0';
+          banner.style.transition = 'opacity 0.3s ease';
+          setTimeout(() => banner.remove(), 300);
+        }, durationMs);
+      }
+
+      async autoReceiveGiftsAndLogVisitors(notifyChanges = true) {
+        if (!this.state) return false;
+        if (!Array.isArray(this.state.guestbook)) {
+          this.state.guestbook = [];
+        }
+        if (!Array.isArray(this.state.activityLogs)) {
+          this.state.activityLogs = [];
+        }
+
+        const existingLogIds = new Set(this.state.activityLogs.map((l) => l.id));
+        const existingGuestbookIds = new Set(this.state.guestbook.map((g) => g.id));
+        let changed = false;
+        let receivedGiftCount = 0;
+        let latestGiftSummary = '';
+
+        const fb = this.storage.getFb();
+        const uid = this.storage.uid || (this.state.user && this.state.user.uid);
+
+        if (fb && uid && this.storage.onlineConnected) {
+          try {
+            const gbSnap = await fb.getDocs(fb.collection(fb.db, 'players', uid, 'guestbook'));
+            if (gbSnap && !gbSnap.empty) {
+              for (const docSnap of gbSnap.docs) {
+                const d = docSnap.data() || {};
+                const docId = docSnap.id;
+                const visitorName = d.visitorName || 'ななしの訪問者';
+                const beaverName = d.beaverName || 'ビーバー';
+                const action = d.action || 'visit';
+                const ts = Number(d.timestamp || Date.now());
+                const message = d.message || (
+                  action === 'gift_wood'
+                    ? `${visitorName}さんが流木をおすそわけしてくれました！`
+                    : `${visitorName}さんが川辺に遊びに来てくれました！`
+                );
+
+                if (!existingGuestbookIds.has(docId)) {
+                  this.state.guestbook.unshift({
+                    id: docId,
+                    visitorName,
+                    beaverName,
+                    action,
+                    message,
+                    timestamp: ts
+                  });
+                  existingGuestbookIds.add(docId);
+                  changed = true;
+                }
+
+                const visitLogId = `visit_gb_${docId}`;
+                if (!existingLogIds.has(visitLogId)) {
+                  this.addActivityLog(
+                    `訪問ログ：${visitorName}さん（${beaverName}）が川辺を訪問（${message}）`,
+                    action === 'gift_wood' ? '#ico-wood' : '#ico-canoe',
+                    ts
+                  );
+                  existingLogIds.add(visitLogId);
+                  changed = true;
+                }
+
+                if (action === 'gift_wood' && !d.woodClaimed) {
+                  const woodAmt = Math.max(1, Number(d.woodAmount) || 1);
+                  this.state.user.wood = Number(this.state.user.wood || 0) + woodAmt;
+                  receivedGiftCount += woodAmt;
+                  latestGiftSummary = `${visitorName}さんから流木+${woodAmt}本のお裾分けを頂きました`;
+
+                  const claimLogId = `claim_gb_${docId}`;
+                  if (!existingLogIds.has(claimLogId)) {
+                    this.addActivityLog(
+                      `お裾分け自動受取：${visitorName}さんから流木+${woodAmt}本を受け取りました！`,
+                      '#ico-gift',
+                      ts
+                    );
+                    existingLogIds.add(claimLogId);
+                  }
+
+                  await fb.setDoc(docSnap.ref, { woodClaimed: true }, { merge: true });
+                  changed = true;
+                }
+              }
+            }
+          } catch (err) {
+            console.warn('お裾分け・訪問ログのオンライン同期チェックに失敗:', err);
+          }
+        }
+
+        for (const entry of this.state.guestbook) {
+          if (!entry || !entry.id) continue;
+          const vName = entry.visitorName || 'ななしの訪問者';
+          const bName = entry.beaverName || 'ビーバー';
+          const ts = Number(entry.timestamp || Date.now());
+          const msg = entry.message || (
+            entry.action === 'gift_wood'
+              ? `${vName}さんが流木をおすそわけしてくれました！`
+              : `${vName}さんが川辺に遊びに来てくれました！`
+          );
+
+          const vLogId = `visit_gb_${entry.id}`;
+          if (!existingLogIds.has(vLogId)) {
+            this.addActivityLog(`訪問ログ：${vName}さん（${bName}）が訪問 — ${msg}`, entry.action === 'gift_wood' ? '#ico-wood' : '#ico-canoe', ts);
+            existingLogIds.add(vLogId);
+            changed = true;
+          }
+
+          if (entry.action === 'gift_wood' && !entry.claimed) {
+            const wAmt = Math.max(1, Number(entry.woodAmount) || 1);
+            this.state.user.wood = Number(this.state.user.wood || 0) + wAmt;
+            entry.claimed = true;
+            receivedGiftCount += wAmt;
+            latestGiftSummary = `${vName}さんから流木+${wAmt}本のお裾分けを頂きました`;
+
+            const cLogId = `claim_gb_${entry.id}`;
+            if (!existingLogIds.has(cLogId)) {
+              this.addActivityLog(`お裾分け自動受取：${vName}さんから流木+${wAmt}本を受け取りました！`, '#ico-gift', ts);
+              existingLogIds.add(cLogId);
+            }
+            changed = true;
+          }
+        }
+
+        if (changed) {
+          this.state.guestbook = this.state.guestbook
+            .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
+            .slice(0, 50);
+          this.renderGuestbook();
+          this.renderActivityLogs();
+          this.updateUI();
+        }
+
+        if (notifyChanges && receivedGiftCount > 0) {
+          this.sound.playChime();
+          this.spawnParticles('wood', Math.min(8, receivedGiftCount + 3));
+          this.showGiftReceivedBanner(`お裾分けを頂きました（流木 +${receivedGiftCount}本）！${latestGiftSummary ? ` - ${latestGiftSummary}` : ''}`, 3600);
+        }
+
+        return changed;
       }
 
       applyResponsiveZoom(delta = 0, resetAuto = false) {
@@ -4939,7 +5125,12 @@
         }
       }
 
-      await game.init();
+      game.setLoadingState(true, '読込中。。。');
+      try {
+        await game.init();
+      } finally {
+        game.setLoadingState(false);
+      }
     });
   </script>
 </body>
