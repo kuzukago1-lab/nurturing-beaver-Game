@@ -385,16 +385,15 @@
               <p class="text-xs text-amber-700 font-bold mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
                 <span>飼い主: <strong id="ui-owner-name" class="text-amber-950">あなた</strong></span>
                 <span class="text-amber-300">|</span>
-                <button type="button" id="btn-toggle-secret-visibility" title="アカウントIDと8桁パスワードの表示・非表示を切り替え" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-stone-100 hover:bg-stone-200 text-stone-800 font-extrabold transition">
-                  <span id="ui-secret-visibility-label">ID・パスを表示</span>
+                <button type="button" id="btn-toggle-secret-visibility" title="アカウントIDの表示・非表示を切り替え" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-stone-100 hover:bg-stone-200 text-stone-800 font-extrabold transition">
+                  <span id="ui-secret-visibility-label">IDを表示</span>
                 </button>
                 <button type="button" id="btn-copy-my-id" title="クリックでアカウントIDをコピー" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-100 hover:bg-amber-200 text-amber-950 font-extrabold transition">
                   <span>ID: <span id="ui-my-account-id">●●●●●●</span></span>
                   <span class="text-[10px] text-amber-700">[コピー]</span>
                 </button>
-                <button type="button" id="btn-open-transfer-modal" title="他端末ログイン・8桁パスワード管理" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-sky-100 hover:bg-sky-200 text-sky-900 font-extrabold transition">
-                  <span>8桁パス: <span id="ui-my-transfer-code">●●●●●●●●</span></span>
-                  <span class="text-[10px] text-sky-700">[ログイン/パス管理]</span>
+                <button type="button" id="btn-open-transfer-modal" title="パスワード管理・他端末ログイン画面へ移動" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-sky-100 hover:bg-sky-200 text-sky-900 font-extrabold transition">
+                  <span>パス管理</span>
                 </button>
                 <span class="text-amber-300">|</span>
                 <span>ダムLv.<span id="ui-dam-level" class="text-sm text-amber-900">1</span> (<span id="ui-dam-progress">0</span>)</span>
@@ -3339,10 +3338,9 @@
         setText('ui-beaver-name', activeBeaver.name);
         setText('ui-owner-name', isVisit ? this.visitingTarget.ownerName : this.state.user.ownerName);
         setText('ui-my-account-id', this.formatSecretId(this.state.user.accountId));
-        setText('ui-my-transfer-code', this.formatSecretCode(this.state.user.transferCode));
         setText('ui-friends-badge', this.state.user.favoriteIds.length);
         setText('ui-favorite-count-label', `お気に入り: ${this.state.user.favoriteIds.length}人`);
-        setText('ui-secret-visibility-label', this.secretsVisible ? 'ID・パスを隠す' : 'ID・パスを表示');
+        setText('ui-secret-visibility-label', this.secretsVisible ? 'IDを隠す' : 'IDを表示');
         const badge = document.getElementById('ui-stage-badge');
         if (badge) {
           badge.textContent = stage.label;
