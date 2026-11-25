@@ -176,7 +176,7 @@
       <path d="M26.1 14.7L24.1 15.3L24.7 14.1C25.1 13.8 25.7 14.0 26.1 14.7Z" fill="#f9a8d4"/>
       <path d="M8.5 11.5C10.5 7.2 21.5 7.2 23.5 11.5C26.2 14.5 26.5 20.5 23.2 24.2C20.5 26.8 11.5 26.8 8.8 24.2C5.5 20.5 5.8 14.5 8.5 11.5Z" fill="#9a5b25"/>
       <ellipse cx="16" cy="20.4" rx="7.2" ry="4.8" fill="#fde68a"/>
-      <!-- 前歯（30%下に長く調整） -->
+      <!-- 前歯 -->
       <rect x="14.0" y="21.6" width="1.7" height="4.9" rx="0.7" fill="#ffffff" stroke="#d6d3d1" stroke-width="0.5"/>
       <rect x="16.3" y="21.6" width="1.7" height="4.9" rx="0.7" fill="#ffffff" stroke="#d6d3d1" stroke-width="0.5"/>
       <ellipse cx="16" cy="17.3" rx="3.1" ry="2.1" fill="#292524"/>
@@ -192,7 +192,6 @@
       <circle cx="11.8" cy="14.5" r="0.5" fill="#ffffff"/>
       <circle cx="20.7" cy="15.0" r="1.5" fill="#1c1917"/>
       <circle cx="21.2" cy="14.5" r="0.5" fill="#ffffff"/>
-      <!-- お髭より後ろの頬位置 -->
       <circle cx="7.4" cy="17.8" r="1.9" fill="#f43f5e" fill-opacity="0.32"/>
       <circle cx="24.6" cy="17.8" r="1.9" fill="#f43f5e" fill-opacity="0.32"/>
     </symbol>
@@ -359,7 +358,6 @@
 
       <!-- まんぷく度・ごきげんメーター -->
       <div class="grid grid-cols-2 gap-3 mt-3 pt-2.5 border-t border-amber-100">
-        <!-- まんぷく度メーター（100: 満腹マックス → 0: ペコペコで徐々に減っていく表示） -->
         <div>
           <div class="flex justify-between text-xs font-bold mb-1">
             <span class="text-orange-800 inline-flex items-center gap-1">
@@ -371,7 +369,6 @@
             <div id="ui-hunger-bar" class="h-full bg-gradient-to-r from-rose-400 via-amber-400 to-emerald-500 rounded-full transition-all duration-300" style="width: 80%;"></div>
           </div>
         </div>
-        <!-- ごきげんメーター＆ボーナス表示 -->
         <div>
           <div class="flex justify-between text-xs font-bold mb-1">
             <span class="text-pink-700 inline-flex items-center gap-1">
@@ -426,7 +423,7 @@
 
     <!-- アクションパネル（自分の川辺用 / 訪問先用で切り替え） -->
     <section id="panel-home-actions" class="bg-white/95 rounded-2xl p-3 sm:p-4 shadow-md border-2 border-amber-200">
-      <!-- お世話スタミナ（時間回復・レベルに応じて上限上昇）ステータスバー -->
+      <!-- お世話スタミナステータスバー -->
       <div class="flex flex-wrap items-center justify-between gap-2 mb-2.5 pb-2 border-b border-amber-100">
         <div class="flex items-center gap-1.5">
           <span class="text-xs font-extrabold text-amber-950">お世話できる回数:</span>
@@ -680,6 +677,64 @@
   <!-- 画面下部トースト通知 -->
   <div id="toast-container" class="fixed bottom-5 inset-x-3 sm:inset-x-6 z-50 pointer-events-none flex flex-col items-center gap-2"></div>
 
+  <!-- Firebase SDK (v10 モジュール・オンライン保存＆ID重複防止用) -->
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+    import { getAuth, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+    import {
+      getFirestore,
+      doc,
+      getDoc,
+      setDoc,
+      collection,
+      getDocs,
+      addDoc,
+      runTransaction,
+      serverTimestamp
+    } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+
+    const firebaseConfig = {
+      apiKey: 'AIzaSyCOpK1Kh1tNvEULxCUY7ApVnEooABMoHwU',
+      authDomain: 'nurturing-beaver-game.firebaseapp.com',
+      projectId: 'nurturing-beaver-game',
+      storageBucket: 'nurturing-beaver-game.firebasestorage.app',
+      messagingSenderId: '1001557044858',
+      appId: '1:1001557044858:web:4977ac52adacccec8055c3',
+      measurementId: 'G-PS4RE2DE9R'
+    };
+
+    let app = null;
+    let auth = null;
+    let db = null;
+    let firebaseReady = false;
+
+    try {
+      app = initializeApp(firebaseConfig);
+      auth = getAuth(app);
+      db = getFirestore(app);
+      firebaseReady = true;
+    } catch (err) {
+      console.warn('Firebase初期化に失敗したためローカル保存モードで動作します:', err);
+      firebaseReady = false;
+    }
+
+    window.__BEAVER_FIREBASE__ = {
+      ready: firebaseReady,
+      auth: auth,
+      db: db,
+      signInAnonymously: signInAnonymously,
+      onAuthStateChanged: onAuthStateChanged,
+      doc: doc,
+      getDoc: getDoc,
+      setDoc: setDoc,
+      collection: collection,
+      getDocs: getDocs,
+      addDoc: addDoc,
+      runTransaction: runTransaction,
+      serverTimestamp: serverTimestamp
+    };
+  </script>
+
   <script>
     /**
      * ============================================================================
@@ -809,12 +864,33 @@
 
     /**
      * ============================================================================
-     * 2. データ永続化アダプター層 (StorageAdapter)
+     * 2. データ永続化アダプター層 (StorageAdapter: LocalStorage + Firebase連携)
      * ============================================================================
      */
     class StorageAdapter {
       constructor(storageKey = 'beaver_ranch_save_v1') {
         this.storageKey = storageKey;
+        this.uid = null;
+        this.onlineConnected = false;
+      }
+
+      setUserId(uid) {
+        if (uid) {
+          this.uid = uid;
+        }
+      }
+
+      getFb() {
+        const fb = window.__BEAVER_FIREBASE__;
+        if (!fb || !fb.ready || !fb.db) return null;
+        return fb;
+      }
+
+      updateSyncBadge(statusText, isOnline = false) {
+        const el = document.getElementById('ui-sync-status');
+        if (!el) return;
+        const dotColor = isOnline ? 'bg-sky-500' : 'bg-emerald-500';
+        el.innerHTML = `<span class="w-2 h-2 rounded-full ${dotColor} ${isOnline ? '' : 'animate-pulse'}"></span>${statusText}`;
       }
 
       getDefaultData() {
@@ -887,62 +963,177 @@
         return `BV-${num}`;
       }
 
+      // FirestoreトランザクションでアカウントIDの重複を防ぎつつ確定する
+      async reserveUniqueAccountId(preferredId = null, uid = null) {
+        const activeUid = uid || this.uid || 'local_player_001';
+        const fb = this.getFb();
+        if (!fb || !this.onlineConnected) {
+          return preferredId || this.generateAccountId();
+        }
+
+        try {
+          const reservedId = await fb.runTransaction(fb.db, async (transaction) => {
+            for (let attempt = 0; attempt < 15; attempt++) {
+              const candidate = (attempt === 0 && preferredId && /^BV-\d{6}$/.test(preferredId))
+                ? preferredId
+                : this.generateAccountId();
+              const regRef = fb.doc(fb.db, 'account_registry', candidate);
+              const snap = await transaction.get(regRef);
+              if (!snap.exists() || snap.data().uid === activeUid) {
+                transaction.set(regRef, {
+                  uid: activeUid,
+                  accountId: candidate,
+                  updatedAt: fb.serverTimestamp()
+                }, { merge: true });
+                return candidate;
+              }
+            }
+            throw new Error('アカウントIDの空き枠が見つかりませんでした');
+          });
+          return reservedId;
+        } catch (err) {
+          console.warn('FirestoreでのID重複チェックに失敗（ローカルIDを使用）:', err);
+          return preferredId || this.generateAccountId();
+        }
+      }
+
+      normalizeLoadedData(parsed) {
+        const def = this.getDefaultData();
+        const safeParsed = parsed || {};
+        return {
+          ...def,
+          registered: Boolean(safeParsed.registered),
+          user: {
+            ...def.user,
+            ...(safeParsed.user || {})
+          },
+          gameClock: {
+            ...def.gameClock,
+            ...(safeParsed.gameClock || {})
+          },
+          beaver: {
+            ...def.beaver,
+            ...(safeParsed.beaver || {}),
+            bodyStyle: {
+              ...def.beaver.bodyStyle,
+              ...((safeParsed.beaver && safeParsed.beaver.bodyStyle) || {})
+            }
+          },
+          stamina: {
+            ...def.stamina,
+            ...(safeParsed.stamina || {}),
+            max: 10 + (Math.max(1, Number((safeParsed.beaver && safeParsed.beaver.damLevel) || def.beaver.damLevel)) - 1) * 4
+          },
+          activityLogs: Array.isArray(safeParsed.activityLogs) ? safeParsed.activityLogs : def.activityLogs,
+          guestbook: Array.isArray(safeParsed.guestbook) ? safeParsed.guestbook : def.guestbook
+        };
+      }
+
       async loadGameData() {
+        let localData = null;
         try {
           const raw = localStorage.getItem(this.storageKey);
-          if (!raw) return this.getDefaultData();
-          const parsed = JSON.parse(raw);
-          const def = this.getDefaultData();
-          return {
-            ...def,
-            registered: Boolean(parsed.registered),
-            user: {
-              ...def.user,
-              ...(parsed.user || {})
-            },
-            gameClock: {
-              ...def.gameClock,
-              ...(parsed.gameClock || {})
-            },
-            beaver: {
-              ...def.beaver,
-              ...(parsed.beaver || {}),
-              bodyStyle: {
-                ...def.beaver.bodyStyle,
-                ...((parsed.beaver && parsed.beaver.bodyStyle) || {})
-              }
-            },
-            stamina: {
-              ...def.stamina,
-              ...(parsed.stamina || {}),
-              max: 10 + (Math.max(1, Number((parsed.beaver && parsed.beaver.damLevel) || def.beaver.damLevel)) - 1) * 4
-            },
-            activityLogs: Array.isArray(parsed.activityLogs) ? parsed.activityLogs : def.activityLogs
-          };
+          if (raw) {
+            localData = this.normalizeLoadedData(JSON.parse(raw));
+          }
         } catch (e) {
-          console.error('セーブデータの読み込みに失敗:', e);
-          return this.getDefaultData();
+          console.error('ローカルセーブデータの読み込みに失敗:', e);
         }
+
+        const fb = this.getFb();
+        if (fb && this.uid) {
+          try {
+            const userDocRef = fb.doc(fb.db, 'players', this.uid);
+            const snap = await fb.getDoc(userDocRef);
+            this.onlineConnected = true;
+
+            if (snap.exists()) {
+              const cloudData = this.normalizeLoadedData(snap.data());
+              cloudData.user.uid = this.uid;
+              if (localData && (localData.user.lastUpdatedAt || 0) > (cloudData.user.lastUpdatedAt || 0)) {
+                localData.user.uid = this.uid;
+                localStorage.setItem(this.storageKey, JSON.stringify(localData));
+                this.updateSyncBadge('オンライン同期済 (Firebase)', true);
+                return localData;
+              }
+              localStorage.setItem(this.storageKey, JSON.stringify(cloudData));
+              this.updateSyncBadge('オンライン同期済 (Firebase)', true);
+              return cloudData;
+            }
+
+            const base = localData || this.getDefaultData();
+            base.user.uid = this.uid;
+            base.user.accountId = await this.reserveUniqueAccountId(base.user.accountId, this.uid);
+            localStorage.setItem(this.storageKey, JSON.stringify(base));
+            await this.saveGameData(base);
+            this.updateSyncBadge('オンライン同期済 (Firebase)', true);
+            return base;
+          } catch (err) {
+            console.warn('Firestore読み込みに失敗したためローカルデータを使用します:', err);
+            this.onlineConnected = false;
+            this.updateSyncBadge('ローカル保存中 (オフライン)', false);
+          }
+        } else {
+          this.updateSyncBadge('ローカル保存済 (Firebase連携対応)', false);
+        }
+
+        return localData || this.getDefaultData();
       }
 
       async saveGameData(data) {
         try {
+          if (!data || !data.user) return false;
           data.user.lastUpdatedAt = Date.now();
+          if (this.uid) {
+            data.user.uid = this.uid;
+          }
           localStorage.setItem(this.storageKey, JSON.stringify(data));
+
+          const fb = this.getFb();
+          const targetUid = this.uid || data.user.uid;
+          if (fb && targetUid && this.onlineConnected) {
+            const payload = {
+              ...data,
+              publicProfile: {
+                uid: targetUid,
+                accountId: data.user.accountId,
+                ownerName: data.user.ownerName,
+                beaverName: data.beaver.name,
+                damLevel: data.beaver.damLevel,
+                damProgress: data.beaver.damProgress,
+                hunger: data.beaver.hunger,
+                mood: data.beaver.mood,
+                color: data.beaver.color,
+                bodyStyle: data.beaver.bodyStyle,
+                registered: Boolean(data.registered),
+                updatedAt: Date.now()
+              },
+              serverUpdatedAt: fb.serverTimestamp()
+            };
+            await fb.setDoc(fb.doc(fb.db, 'players', targetUid), payload, { merge: true });
+            this.updateSyncBadge('オンライン同期済 (Firebase)', true);
+          }
           return true;
         } catch (e) {
           console.error('セーブデータの保存に失敗:', e);
+          this.updateSyncBadge('ローカル保存済 (同期待機)', false);
           return false;
         }
       }
 
       async resetGameData() {
         localStorage.removeItem(this.storageKey);
-        return this.getDefaultData();
+        const fresh = this.getDefaultData();
+        if (this.uid) {
+          fresh.user.uid = this.uid;
+          fresh.user.accountId = await this.reserveUniqueAccountId(null, this.uid);
+        }
+        await this.saveGameData(fresh);
+        return fresh;
       }
 
       async fetchNeighbors() {
-        return [
+        const defaultNeighbors = [
           {
             uid: 'neighbor_1',
             accountId: 'BV-204819',
@@ -996,10 +1187,66 @@
             visitedToday: false
           }
         ];
+
+        const fb = this.getFb();
+        if (!fb || !this.onlineConnected) {
+          return defaultNeighbors;
+        }
+
+        try {
+          const snap = await fb.getDocs(fb.collection(fb.db, 'players'));
+          const onlineNeighbors = [];
+          snap.forEach((docSnap) => {
+            if (docSnap.id === this.uid) return;
+            const raw = docSnap.data() || {};
+            const prof = raw.publicProfile || {};
+            const userObj = raw.user || {};
+            const beaverObj = raw.beaver || {};
+            const ownerName = prof.ownerName || userObj.ownerName;
+            const beaverName = prof.beaverName || beaverObj.name;
+            const accountId = prof.accountId || userObj.accountId;
+            if (!ownerName || !beaverName || !accountId) return;
+
+            onlineNeighbors.push({
+              uid: docSnap.id,
+              accountId,
+              ownerName,
+              beaverName,
+              damLevel: Number(prof.damLevel ?? beaverObj.damLevel ?? 1),
+              damProgress: Number(prof.damProgress ?? beaverObj.damProgress ?? 0),
+              hunger: Number(prof.hunger ?? beaverObj.hunger ?? 20),
+              mood: Number(prof.mood ?? beaverObj.mood ?? 80),
+              color: prof.color || beaverObj.color || '#9a5b25',
+              bodyStyle: prof.bodyStyle || beaverObj.bodyStyle || null,
+              comment: 'オンライン川辺で活動中！',
+              visitedToday: false
+            });
+          });
+          return [...onlineNeighbors, ...defaultNeighbors];
+        } catch (err) {
+          console.warn('他プレイヤー一覧の取得に失敗（デフォルト川辺を表示）:', err);
+          return defaultNeighbors;
+        }
       }
 
       async sendVisitInteraction(neighborUid, actionType, senderName) {
-        await new Promise((r) => setTimeout(r, 120));
+        const fb = this.getFb();
+        if (fb && this.onlineConnected && neighborUid && !neighborUid.startsWith('neighbor_')) {
+          try {
+            await fb.addDoc(fb.collection(fb.db, 'players', neighborUid, 'guestbook'), {
+              visitorUid: this.uid || 'anonymous',
+              visitorName: senderName || '旅人',
+              action: actionType,
+              message: actionType === 'gift_wood'
+                ? `${senderName || '旅人'}さんが流木をおすそわけしてくれました！`
+                : `${senderName || '旅人'}さんがビーバーをなでなでしてくれました♪`,
+              timestamp: Date.now(),
+              createdAt: fb.serverTimestamp()
+            });
+          } catch (err) {
+            console.warn('訪問ログ送信に失敗:', err);
+          }
+        }
         return { success: true, neighborUid, actionType, senderName };
       }
     }
@@ -1435,7 +1682,7 @@
       // ゲーム内時刻（0〜23時）から時間帯（朝・昼・夕方・夜）を取得（1時間ごとに循環）
       getTimeOfDayInfo(hour = (this.state && this.state.gameClock && this.state.gameClock.hour) || 12) {
         const h = ((Math.floor(Number(hour)) % 24) + 24) % 24;
-        const cycleIdx = h % 4; // 1時間ごとに 朝(0) → 昼(1) → 夕方(2) → 夜(3) へ変化
+        const cycleIdx = h % 4;
         if (cycleIdx === 0) {
           return { period: 'morning', label: '朝', icon: '🌅', skyTop: '#fed7aa', skyBottom: '#e0f2fe', hillBack: '#86efac', hillFront: '#4ade80', waterTop: '#7dd3fc', waterMid: '#0284c7', waterBottom: '#0369a1' };
         }
@@ -2064,7 +2311,9 @@
               return;
             }
             this.state.user.ownerName = ownerVal.slice(0, 12);
-            this.state.user.accountId = this.pendingStartAccountId || this.state.user.accountId;
+            const desiredId = this.pendingStartAccountId || this.state.user.accountId;
+            this.state.user.accountId = await this.storage.reserveUniqueAccountId(desiredId, this.state.user.uid);
+            this.pendingStartAccountId = this.state.user.accountId;
             this.state.beaver.name = beaverVal.slice(0, 12);
             this.state.beaver.color = this.pendingBeaverCustom.color;
             this.state.beaver.bodyStyle = {
@@ -2290,7 +2539,6 @@
             maxLife: 70
           });
         }
-        // 中心のきらめきリング
         for (let j = 0; j < 12; j++) {
           const angle = (Math.PI * 2 * j) / 12;
           const speed = 0.8 + Math.random() * 0.6;
@@ -2307,7 +2555,7 @@
         }
       }
 
-      // UI全体更新（内部の hunger は 0=満腹〜100=空腹 として保持し、UIでは 100 - hunger をまんぷく度として表示）
+      // UI全体更新
       updateUI() {
         const isVisit = Boolean(this.visitingTarget);
         const activeBeaver = isVisit
@@ -2649,7 +2897,6 @@
         if (this.beaverAnim.action === 'sleep') {
           const nowMs = performance.now();
           if (isOnDamTop && !this.beaverAnim.sleepHasClosedEyes) {
-            // ダムの上に登りきってから目を閉じ、最低30秒〜最長3分の睡眠タイマーを開始
             this.beaverAnim.sleepHasClosedEyes = true;
             this.beaverAnim.sleepStartedAtMs = nowMs;
             const sleepDurationMs = 30000 + Math.random() * 150000;
@@ -2699,7 +2946,6 @@
         });
         this.particles = this.particles.filter((p) => p.life > 0);
 
-        // レベルアップ花火の打ち上げ＆火花更新（5秒間）
         const now = performance.now();
         if (this.fireworkEndTime > now && now >= this.nextFireworkLaunchAt) {
           this.launchSingleFirework();
@@ -2870,7 +3116,6 @@
         if (this.fireworks.length === 0 && this.fireworkSparks.length === 0) return;
         ctx.save();
 
-        // 打ち上げ中の火の玉と軌跡
         this.fireworks.forEach((fw) => {
           fw.trail.forEach((pt, idx) => {
             const ratio = (idx + 1) / fw.trail.length;
@@ -2887,7 +3132,6 @@
           ctx.fill();
         });
 
-        // 炸裂後のカラフルな火花（水面へのほんのり反射も描画）
         const waterY = this.height * 0.56;
         this.fireworkSparks.forEach((sp) => {
           const alpha = Math.max(0, Math.min(1, sp.life / (sp.maxLife * 0.65)));
@@ -2897,7 +3141,6 @@
           ctx.arc(sp.x, sp.y, sp.size, 0, Math.PI * 2);
           ctx.fill();
 
-          // 水面下の反射光
           if (sp.y < waterY) {
             const reflY = waterY + (waterY - sp.y) * 0.45;
             if (reflY < this.height) {
@@ -3136,7 +3379,7 @@
 
         const dolphinWave = isSwimming ? Math.sin(this.time * 3.4) : 0;
 
-        // 1. 大きなしっぽ（ドルフィンキックに連動・長さと太さカスタマイズ対応・寝ているときは先端を下に降ろして静止）
+        // 1. 大きなしっぽ
         ctx.save();
         const tailFreq = isHappy ? 14 : isSwimming ? 3.4 : sadLevel >= 2 ? 1.8 : 4;
         const tailWag = isSleeping
@@ -3162,7 +3405,7 @@
         ctx.stroke();
         ctx.restore();
 
-        // 2. 奥側の後ろ足（ドルフィンキック時は両足を揃えてやや後方でゆらゆらパタパタする）
+        // 2. 奥側の後ろ足
         ctx.save();
         const backFootKick = isSwimming
           ? Math.sin(this.time * 3.4 - 0.5) * 0.42
@@ -3172,7 +3415,6 @@
         ctx.translate(backFootX, backFootY);
         ctx.rotate(backFootKick);
         if (isSwimming) {
-          // 奥側の後ろ足：広がる水掻き膜と指先
           ctx.fillStyle = 'rgba(249, 168, 212, 0.72)';
           ctx.beginPath();
           ctx.moveTo(-6, 0.5);
@@ -3229,7 +3471,7 @@
         ctx.fill();
         ctx.restore();
 
-        // 4. ネズミの体型に近い洋梨型の胴体（腰まわりカスタマイズ対応）
+        // 4. 洋梨型の胴体
         ctx.save();
         if (isSwimming) {
           ctx.translate(0, dolphinWave * 1.6);
@@ -3246,7 +3488,6 @@
         ctx.closePath();
         ctx.fill();
 
-        // 毛並みライン（胴体）
         ctx.strokeStyle = 'rgba(41, 18, 6, 0.28)';
         ctx.lineWidth = 1;
         ctx.lineCap = 'round';
@@ -3257,14 +3498,13 @@
           ctx.stroke();
         });
 
-        // お腹の明るい毛色
         ctx.fillStyle = '#fde68a';
         ctx.beginPath();
         ctx.ellipse(5, 7.2, 9.2, 6.8, -0.1, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
 
-        // 5. 手前側の後ろ足（泳ぐときはやや後方でゆらゆらパタパタ、足裏ピンク丸は泳ぎ中非表示）
+        // 5. 手前側の後ろ足
         ctx.save();
         const frontFootKick = isSwimming
           ? Math.sin(this.time * 3.4 - 0.5) * 0.42
@@ -3274,7 +3514,6 @@
         ctx.translate(frontFootX, frontFootY);
         ctx.rotate(frontFootKick);
         if (isSwimming) {
-          // 手前側の後ろ足：ぷにっとかわいい水掻き膜と指先の筋
           ctx.fillStyle = 'rgba(249, 168, 212, 0.85)';
           ctx.strokeStyle = '#6b3416';
           ctx.lineWidth = 1.0;
@@ -3321,7 +3560,7 @@
         }
         ctx.restore();
 
-        // 6. 頭（頭サイズカスタマイズ対応）
+        // 6. 頭
         ctx.save();
         const refuseWave = isRefusing
           ? Math.sin(Math.min(1, Math.max(0, 1 - (this.beaverAnim.actionTimer / (this.beaverAnim.refuseDuration || 120)))) * Math.PI * 4)
@@ -3333,7 +3572,6 @@
         ctx.scale(metrics.headScale, metrics.headScale);
         ctx.rotate(headNod + headTilt);
 
-        // 耳（横向き）
         ctx.save();
         ctx.translate(-3.5, -13.5 + sadLevel * 0.8);
         ctx.rotate(-0.28 + sadLevel * 0.08);
@@ -3347,7 +3585,6 @@
         ctx.fill();
         ctx.restore();
 
-        // 頭本体
         ctx.fillStyle = furColor;
         ctx.beginPath();
         ctx.moveTo(-12.5, -6.5);
@@ -3357,13 +3594,11 @@
         ctx.closePath();
         ctx.fill();
 
-        // 口元の明るい毛色
         ctx.fillStyle = '#fde68a';
         ctx.beginPath();
         ctx.ellipse(9.5, 3.5, 7.5, 5.8, 0.1, 0, Math.PI * 2);
         ctx.fill();
 
-        // 前歯（30%下に長く調整）
         ctx.fillStyle = '#ffffff';
         ctx.strokeStyle = '#d6d3d1';
         ctx.lineWidth = 0.9;
@@ -3373,7 +3608,6 @@
         ctx.fill();
         ctx.stroke();
 
-        // お鼻とほっぺ
         ctx.fillStyle = '#292524';
         ctx.beginPath();
         ctx.ellipse(17.5, 2.2, 3.3, 2.5, 0.15, 0, Math.PI * 2);
@@ -3384,7 +3618,6 @@
         ctx.arc(2.6, 4.4, 3.3, 0, Math.PI * 2);
         ctx.fill();
 
-        // お髭
         const whiskerTwitch = isHappy ? Math.sin(this.time * 22) * 1.4 : Math.sin(this.time * 4) * 0.35;
         const whiskerDroop = sadLevel * 1.2;
         ctx.lineCap = 'round';
@@ -3415,7 +3648,6 @@
           ctx.stroke();
         });
 
-        // 目
         const eyeX = 5.4;
         const eyeY = -2.2;
         ctx.strokeStyle = '#1c1917';
@@ -3531,7 +3763,6 @@
         const refuseShakeX = isRefusing ? refuseWave * 4.5 : 0;
         const headTilt = isRefusing ? refuseWave * 0.22 : 0;
 
-        // しっぽ（長さと太さカスタマイズ対応）
         ctx.save();
         const tailWag = Math.sin(this.time * (isHappy ? 14 : 4)) * 0.14;
         ctx.translate(15 * m.waistScaleX, 6.5 * m.waistScaleY);
@@ -3551,7 +3782,6 @@
         ctx.stroke();
         ctx.restore();
 
-        // 腰まわりの正面胴体（腰まわりサイズ対応）
         ctx.save();
         ctx.scale(m.waistScaleX, m.waistScaleY);
         ctx.fillStyle = furColor;
@@ -3652,7 +3882,6 @@
         ctx.ellipse(0, 5.5, 11.5, 7.5, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // 前歯（30%下に長く調整）
         ctx.fillStyle = '#ffffff';
         ctx.strokeStyle = '#d6d3d1';
         ctx.lineWidth = 0.9;
@@ -3758,8 +3987,49 @@
     }
 
     window.addEventListener('DOMContentLoaded', () => {
-      const game = new BeaverGame();
-      game.init();
+      const fb = window.__BEAVER_FIREBASE__;
+      let started = false;
+
+      const bootGame = async (uid = null) => {
+        if (started) return;
+        started = true;
+        const game = new BeaverGame();
+        if (uid && typeof game.storage.setUserId === 'function') {
+          game.storage.setUserId(uid);
+        }
+        await game.init();
+      };
+
+      if (!fb || !fb.ready || !fb.auth) {
+        bootGame(null);
+        return;
+      }
+
+      const fallbackTimer = setTimeout(() => {
+        bootGame(null);
+      }, 2000);
+
+      try {
+        if (typeof fb.onAuthStateChanged === 'function') {
+          fb.onAuthStateChanged(fb.auth, (user) => {
+            if (user && user.uid) {
+              clearTimeout(fallbackTimer);
+              bootGame(user.uid);
+            }
+          });
+        }
+        if (typeof fb.signInAnonymously === 'function') {
+          fb.signInAnonymously(fb.auth).catch((err) => {
+            console.warn('Firebase匿名サインインに失敗（ローカル保存で起動）:', err);
+            clearTimeout(fallbackTimer);
+            bootGame(null);
+          });
+        }
+      } catch (err) {
+        console.warn('Firebase認証処理で例外発生（ローカル保存で起動）:', err);
+        clearTimeout(fallbackTimer);
+        bootGame(null);
+      }
     });
   </script>
 </body>
