@@ -84,25 +84,59 @@
         </span>
         <h2 class="text-xl sm:text-2xl font-extrabold text-amber-950">もくもく川辺のビーバー育成記</h2>
         <p class="text-xs text-amber-800 mt-1">
-          飼い主名とビーバーの名前を登録して、あなたのアカウントIDを発行しましょう。
+          飼い主名とビーバーの名前を登録するか、引き継ぎコードでデータを読み込みましょう。
         </p>
       </div>
 
-      <!-- 自動発行されるアカウントID表示 -->
-      <div class="bg-amber-50 border-2 border-amber-200 rounded-2xl p-3 mb-4">
-        <div class="flex items-center justify-between">
-          <span class="text-[11px] font-extrabold text-amber-800">あなたのアカウントID（フレンド検索用）</span>
-          <button type="button" id="btn-regenerate-start-id" class="text-[11px] font-bold text-amber-700 hover:text-amber-950 underline transition">
-            IDを変更
+      <!-- 他の端末からのデータ引き継ぎエリア -->
+      <div class="bg-sky-50 border-2 border-sky-200 rounded-2xl p-3 mb-3">
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-xs font-extrabold text-sky-950">スマホ・PCからデータ引き継ぎ</span>
+          <button type="button" id="btn-toggle-start-transfer" class="px-2.5 py-1 rounded-lg bg-sky-500 hover:bg-sky-600 text-white text-[11px] font-extrabold transition">
+            コードで読み込む
           </button>
         </div>
-        <div class="flex items-center justify-between mt-1.5 gap-2">
-          <code id="start-preview-id" class="text-base sm:text-lg font-extrabold tracking-wider text-amber-950 bg-white px-3 py-1 rounded-xl border border-amber-300 flex-1 text-center select-all">
-            BV-100001
-          </code>
-          <button type="button" id="btn-copy-start-id" class="px-3 py-1.5 rounded-xl bg-amber-200 hover:bg-amber-300 text-amber-950 text-xs font-extrabold transition shrink-0">
-            コピー
+        <div id="start-transfer-box" class="hidden mt-2.5 pt-2.5 border-t border-sky-200 space-y-2">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div>
+              <label for="input-start-transfer-id" class="block text-[11px] font-bold text-sky-900 mb-0.5">アカウントID（6桁数字）</label>
+              <div class="flex items-center rounded-xl border border-sky-300 bg-white overflow-hidden">
+                <span class="px-2 py-1.5 bg-sky-100 text-sky-900 font-extrabold text-xs border-r border-sky-200">BV-</span>
+                <input id="input-start-transfer-id" type="text" inputmode="numeric" maxlength="6" placeholder="123456" class="w-full px-2.5 py-1.5 text-xs font-extrabold text-sky-950 focus:outline-none">
+              </div>
+            </div>
+            <div>
+              <label for="input-start-transfer-code" class="block text-[11px] font-bold text-sky-900 mb-0.5">引き継ぎコード（4桁数字）</label>
+              <input id="input-start-transfer-code" type="text" inputmode="numeric" maxlength="4" placeholder="例: 4829" class="w-full px-2.5 py-1.5 rounded-xl border border-sky-300 bg-white text-xs font-extrabold text-sky-950 focus:outline-none">
+            </div>
+          </div>
+          <button type="button" id="btn-exec-start-transfer" class="btn-game w-full py-2 px-3 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-extrabold shadow-xs transition">
+            このIDと引き継ぎコードでデータを読み込む
           </button>
+        </div>
+      </div>
+
+      <!-- 自動発行されるアカウントID＆初期引き継ぎコード表示 -->
+      <div class="bg-amber-50 border-2 border-amber-200 rounded-2xl p-3 mb-4 space-y-2">
+        <div>
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-extrabold text-amber-800">あなたのアカウントID（フレンド検索用）</span>
+            <button type="button" id="btn-regenerate-start-id" class="text-[11px] font-bold text-amber-700 hover:text-amber-950 underline transition">
+              IDを変更
+            </button>
+          </div>
+          <div class="flex items-center justify-between mt-1 gap-2">
+            <code id="start-preview-id" class="text-base sm:text-lg font-extrabold tracking-wider text-amber-950 bg-white px-3 py-1 rounded-xl border border-amber-300 flex-1 text-center select-all">
+              BV-100001
+            </code>
+            <button type="button" id="btn-copy-start-id" class="px-3 py-1.5 rounded-xl bg-amber-200 hover:bg-amber-300 text-amber-950 text-xs font-extrabold transition shrink-0">
+              コピー
+            </button>
+          </div>
+        </div>
+        <div class="flex items-center justify-between pt-1 border-t border-amber-200/80 text-xs">
+          <span class="font-bold text-amber-800">引き継ぎコード：<strong id="start-preview-code" class="text-amber-950 tracking-widest">0000</strong></span>
+          <span class="text-[10px] font-bold text-amber-700">あとから変更もできます</span>
         </div>
       </div>
 
@@ -320,6 +354,10 @@
               <button type="button" id="btn-copy-my-id" title="クリックでアカウントIDをコピー" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-100 hover:bg-amber-200 text-amber-950 font-extrabold transition">
                 <span>ID: <span id="ui-my-account-id">BV-000000</span></span>
                 <span class="text-[10px] text-amber-700">[コピー]</span>
+              </button>
+              <button type="button" id="btn-open-transfer-modal" title="引き継ぎコードの確認・再発行・読み込み" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-sky-100 hover:bg-sky-200 text-sky-900 font-extrabold transition">
+                <span>引継コード: <span id="ui-my-transfer-code">0000</span></span>
+                <span class="text-[10px] text-sky-700">[引継管理]</span>
               </button>
               <span class="text-amber-300">|</span>
               <span>ダムLv.<span id="ui-dam-level" class="text-sm text-amber-900">1</span> (<span id="ui-dam-progress">0</span>)</span>
@@ -581,6 +619,65 @@
     </section>
   </div>
 
+  <!-- 引き継ぎコード確認・再発行＆他端末からの読み込みモーダル -->
+  <div id="transfer-modal-overlay" class="hidden fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-5 shadow-2xl border-2 border-sky-300 space-y-4 max-h-[88vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-sky-100 pb-2.5">
+        <h3 class="text-base sm:text-lg font-extrabold text-amber-950">アカウントID ＆ 引き継ぎコード</h3>
+        <button type="button" id="btn-close-transfer-modal" class="w-8 h-8 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-700 font-extrabold flex items-center justify-center">
+          ✕
+        </button>
+      </div>
+
+      <!-- 自分の引き継ぎ情報 -->
+      <div class="bg-amber-50 border-2 border-amber-200 rounded-2xl p-3.5 space-y-2">
+        <div class="text-xs font-extrabold text-amber-900">現在の端末の引き継ぎ情報（他の端末へ送る場合）</div>
+        <div class="grid grid-cols-2 gap-2">
+          <div class="bg-white rounded-xl p-2 border border-amber-200">
+            <div class="text-[10px] font-bold text-amber-700">アカウントID</div>
+            <div id="modal-my-account-id" class="text-sm font-extrabold text-amber-950 tracking-wider">BV-000000</div>
+          </div>
+          <div class="bg-white rounded-xl p-2 border border-amber-200">
+            <div class="text-[10px] font-bold text-amber-700">引き継ぎコード（4桁）</div>
+            <div id="modal-my-transfer-code" class="text-sm font-extrabold text-sky-900 tracking-widest">0000</div>
+          </div>
+        </div>
+        <div class="flex gap-2 pt-1">
+          <button type="button" id="btn-copy-transfer-pair" class="flex-1 py-2 px-3 rounded-xl bg-amber-200 hover:bg-amber-300 text-amber-950 text-xs font-extrabold transition">
+            IDとコードをコピー
+          </button>
+          <button type="button" id="btn-reissue-transfer-code" class="py-2 px-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-extrabold transition">
+            コード再発行
+          </button>
+        </div>
+      </div>
+
+      <!-- 他の端末・アカウントから読み込む -->
+      <div class="bg-sky-50 border-2 border-sky-200 rounded-2xl p-3.5 space-y-2.5">
+        <div class="text-xs font-extrabold text-sky-950">別の端末・アカウントからデータを読み込む</div>
+        <p class="text-[11px] text-sky-800 leading-relaxed">
+          読み込み元のアカウントID（6桁数字）と引き継ぎコード（4桁数字）を入力すると、クラウド上のセーブデータをこの端末へ読み込みます。
+        </p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div>
+            <label for="input-modal-transfer-id" class="block text-[11px] font-bold text-sky-900 mb-0.5">アカウントID</label>
+            <div class="flex items-center rounded-xl border border-sky-300 bg-white overflow-hidden">
+              <span class="px-2 py-1.5 bg-sky-100 text-sky-900 font-extrabold text-xs border-r border-sky-200">BV-</span>
+              <input id="input-modal-transfer-id" type="text" inputmode="numeric" maxlength="6" placeholder="123456" class="w-full px-2.5 py-1.5 text-xs font-extrabold text-sky-950 focus:outline-none">
+            </div>
+          </div>
+          <div>
+            <label for="input-modal-transfer-code" class="block text-[11px] font-bold text-sky-900 mb-0.5">引き継ぎコード（4桁）</label>
+            <input id="input-modal-transfer-code" type="text" inputmode="numeric" maxlength="4" placeholder="1234" class="w-full px-2.5 py-1.5 rounded-xl border border-sky-300 bg-white text-xs font-extrabold text-sky-950 focus:outline-none">
+          </div>
+        </div>
+        <button type="button" id="btn-exec-modal-transfer" class="btn-game w-full py-2.5 px-4 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs sm:text-sm font-extrabold shadow transition">
+          セーブデータを読み込む
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- 名前変更・確認用カスタムモーダル -->
   <div id="modal-overlay" class="hidden fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl max-w-sm w-full p-5 shadow-2xl border-2 border-amber-300">
@@ -687,6 +784,8 @@
       getDoc,
       setDoc,
       collection,
+      query,
+      where,
       getDocs,
       addDoc,
       runTransaction,
@@ -728,6 +827,8 @@
       getDoc: getDoc,
       setDoc: setDoc,
       collection: collection,
+      query: query,
+      where: where,
       getDocs: getDocs,
       addDoc: addDoc,
       runTransaction: runTransaction,
@@ -899,6 +1000,7 @@
           user: {
             uid: 'local_player_001',
             accountId: this.generateAccountId(),
+            transferCode: this.generateTransferCode(),
             ownerName: 'あなた',
             wood: 6,
             coins: 35,
@@ -963,6 +1065,61 @@
         return `BV-${num}`;
       }
 
+      generateTransferCode() {
+        return String(Math.floor(1000 + Math.random() * 9000));
+      }
+
+      // アカウントID＆引き継ぎコードでFirestoreからセーブデータを検索・検証して取得する
+      async fetchSaveByTransferCode(accountId, transferCode) {
+        const normalizedId = String(accountId || '').trim().toUpperCase();
+        const normalizedCode = String(transferCode || '').trim();
+        if (!/^BV-\d{6}$/.test(normalizedId)) {
+          return { ok: false, message: 'アカウントIDは6桁の数字で入力してください。' };
+        }
+        if (!/^\d{4}$/.test(normalizedCode)) {
+          return { ok: false, message: '引き継ぎコードは4桁の半角数字で入力してください。' };
+        }
+
+        const fb = this.getFb();
+        if (!fb || !this.onlineConnected) {
+          return { ok: false, message: '現在オンライン接続（Firebase）が利用できないため、引き継ぎデータを読み込めません。' };
+        }
+
+        try {
+          const qRef = fb.query(
+            fb.collection(fb.db, 'players'),
+            fb.where('user.accountId', '==', normalizedId)
+          );
+          const snap = await fb.getDocs(qRef);
+          if (snap.empty) {
+            return { ok: false, message: `アカウントID「${normalizedId}」のデータが見つかりませんでした。` };
+          }
+
+          let matchedDoc = null;
+          snap.forEach((docSnap) => {
+            if (matchedDoc) return;
+            const raw = docSnap.data() || {};
+            const code = String((raw.user && raw.user.transferCode) || '').trim();
+            if (code === normalizedCode) {
+              matchedDoc = { id: docSnap.id, data: raw };
+            }
+          });
+
+          if (!matchedDoc) {
+            return { ok: false, message: '引き継ぎコードが一致しません。コードを確認してください。' };
+          }
+
+          const restored = this.normalizeLoadedData(matchedDoc.data);
+          restored.registered = true;
+          restored.user.accountId = normalizedId;
+          restored.user.transferCode = normalizedCode;
+          return { ok: true, data: restored, sourceUid: matchedDoc.id };
+        } catch (err) {
+          console.error('引き継ぎデータの読み込みに失敗:', err);
+          return { ok: false, message: '引き継ぎデータの読み込み中にエラーが発生しました。' };
+        }
+      }
+
       // FirestoreトランザクションでアカウントIDの重複を防ぎつつ確定する
       async reserveUniqueAccountId(preferredId = null, uid = null) {
         const activeUid = uid || this.uid || 'local_player_001';
@@ -1000,13 +1157,17 @@
       normalizeLoadedData(parsed) {
         const def = this.getDefaultData();
         const safeParsed = parsed || {};
+        const mergedUser = {
+          ...def.user,
+          ...(safeParsed.user || {})
+        };
+        if (!/^\d{4}$/.test(String(mergedUser.transferCode || ''))) {
+          mergedUser.transferCode = this.generateTransferCode();
+        }
         return {
           ...def,
           registered: Boolean(safeParsed.registered),
-          user: {
-            ...def.user,
-            ...(safeParsed.user || {})
-          },
+          user: mergedUser,
           gameClock: {
             ...def.gameClock,
             ...(safeParsed.gameClock || {})
@@ -1265,6 +1426,7 @@
         this.neighbors = [];
         this.visitingTarget = null;
         this.pendingStartAccountId = null;
+        this.pendingStartTransferCode = null;
         this.searchedNeighbor = null;
         this.friendSortMode = 'fav_first';
         this.colorChoices = [
@@ -1348,6 +1510,7 @@
         this.state = await this.storage.loadGameData();
         this.neighbors = await this.storage.fetchNeighbors();
         this.pendingStartAccountId = this.state.user.accountId;
+        this.pendingStartTransferCode = this.state.user.transferCode || this.storage.generateTransferCode();
         const savedBody = this.state.beaver.bodyStyle || {};
         this.pendingBeaverCustom = {
           color: this.state.beaver.color || '#9a5b25',
@@ -1385,6 +1548,78 @@
         }, 1000);
 
         requestAnimationFrame(() => this.loop());
+      }
+
+      // 引き継ぎコードによるセーブデータ読み込みの実行
+      async performTransferLoad(rawIdDigits, rawCode) {
+        const digits = String(rawIdDigits || '').replace(/[^0-9]/g, '').slice(0, 6);
+        const code = String(rawCode || '').replace(/[^0-9]/g, '').slice(0, 4);
+        if (digits.length !== 6) {
+          this.showToast('アカウントIDは6桁の数字で入力してください');
+          return;
+        }
+        if (code.length !== 4) {
+          this.showToast('引き継ぎコードは4桁の数字で入力してください');
+          return;
+        }
+
+        const fullId = `BV-${digits}`;
+        this.showToast(`「${fullId}」の引き継ぎデータを確認中...`);
+        const res = await this.storage.fetchSaveByTransferCode(fullId, code);
+        if (!res.ok || !res.data) {
+          this.showToast(res.message || '引き継ぎデータの読み込みに失敗しました');
+          return;
+        }
+
+        const currentUid = this.storage.uid || this.state.user.uid;
+        const imported = this.storage.normalizeLoadedData(res.data);
+        imported.registered = true;
+        imported.user.uid = currentUid;
+        imported.user.accountId = await this.storage.reserveUniqueAccountId(imported.user.accountId, currentUid);
+
+        this.state = imported;
+        this.visitingTarget = null;
+        this.pendingStartAccountId = this.state.user.accountId;
+        this.pendingStartTransferCode = this.state.user.transferCode;
+        this.pendingBeaverCustom = {
+          color: this.state.beaver.color,
+          headSize: this.state.beaver.bodyStyle.headSize,
+          waistSize: this.state.beaver.bodyStyle.waistSize,
+          tailLength: this.state.beaver.bodyStyle.tailLength,
+          tailSize: this.state.beaver.bodyStyle.tailSize
+        };
+
+        this.syncMaxStamina(false);
+        this.addActivityLog(`引き継ぎコードで「${this.state.beaver.name}（${this.state.user.accountId}）」のデータを読み込みました！`, '#ico-sparkle');
+        await this.storage.saveGameData(this.state);
+        this.neighbors = await this.storage.fetchNeighbors();
+
+        const transferModal = document.getElementById('transfer-modal-overlay');
+        if (transferModal) transferModal.classList.add('hidden');
+
+        this.syncStartScreenState();
+        this.updateUI();
+        this.renderActivityLogs();
+        this.renderNeighbors();
+        this.renderFriendsTab();
+        this.renderGuestbook();
+        this.sound.playChime();
+        this.showToast(`「${this.state.beaver.name}」のデータを読み込みました！`);
+      }
+
+      openTransferModal() {
+        const modal = document.getElementById('transfer-modal-overlay');
+        if (!modal) return;
+        const idEl = document.getElementById('modal-my-account-id');
+        const codeEl = document.getElementById('modal-my-transfer-code');
+        if (idEl) idEl.textContent = this.state.user.accountId;
+        if (codeEl) codeEl.textContent = this.state.user.transferCode || '0000';
+        const inId = document.getElementById('input-modal-transfer-id');
+        const inCode = document.getElementById('input-modal-transfer-code');
+        if (inId) inId.value = '';
+        if (inCode) inCode.value = '';
+        modal.classList.remove('hidden');
+        this.sound.playPop(420);
       }
 
       // ごきげん度に応じたボーナス倍率・説明取得
@@ -1593,6 +1828,10 @@
         const previewIdEl = document.getElementById('start-preview-id');
         if (previewIdEl) {
           previewIdEl.textContent = this.pendingStartAccountId || this.state.user.accountId;
+        }
+        const previewCodeEl = document.getElementById('start-preview-code');
+        if (previewCodeEl) {
+          previewCodeEl.textContent = this.pendingStartTransferCode || this.state.user.transferCode || '0000';
         }
         const ownerInput = document.getElementById('input-start-owner');
         const beaverInput = document.getElementById('input-start-beaver');
@@ -2285,6 +2524,80 @@
           if (el) el.addEventListener(ev, fn);
         };
 
+        on('btn-toggle-start-transfer', 'click', () => {
+          const box = document.getElementById('start-transfer-box');
+          if (!box) return;
+          box.classList.toggle('hidden');
+          this.sound.playPop(400);
+        });
+
+        const startTrId = document.getElementById('input-start-transfer-id');
+        if (startTrId) {
+          startTrId.addEventListener('input', (e) => {
+            const digits = e.target.value.replace(/[^0-9]/g, '').slice(0, 6);
+            if (e.target.value !== digits) e.target.value = digits;
+          });
+        }
+        const startTrCode = document.getElementById('input-start-transfer-code');
+        if (startTrCode) {
+          startTrCode.addEventListener('input', (e) => {
+            const digits = e.target.value.replace(/[^0-9]/g, '').slice(0, 4);
+            if (e.target.value !== digits) e.target.value = digits;
+          });
+        }
+
+        on('btn-exec-start-transfer', 'click', async () => {
+          const idVal = document.getElementById('input-start-transfer-id').value;
+          const codeVal = document.getElementById('input-start-transfer-code').value;
+          await this.performTransferLoad(idVal, codeVal);
+        });
+
+        on('btn-open-transfer-modal', 'click', () => this.openTransferModal());
+        on('btn-close-transfer-modal', 'click', () => {
+          const modal = document.getElementById('transfer-modal-overlay');
+          if (modal) modal.classList.add('hidden');
+        });
+
+        on('btn-copy-transfer-pair', 'click', () => {
+          const code = this.state.user.transferCode || '0000';
+          const pairText = `アカウントID: ${this.state.user.accountId} / 引き継ぎコード: ${code}`;
+          this.copyToClipboard(pairText, 'アカウントIDと引き継ぎコードをコピーしました');
+        });
+
+        on('btn-reissue-transfer-code', 'click', async () => {
+          const newCode = this.storage.generateTransferCode();
+          this.state.user.transferCode = newCode;
+          this.pendingStartTransferCode = newCode;
+          const codeEl = document.getElementById('modal-my-transfer-code');
+          if (codeEl) codeEl.textContent = newCode;
+          this.addActivityLog(`引き継ぎコードを「${newCode}」に再発行しました`, '#ico-edit');
+          await this.storage.saveGameData(this.state);
+          this.updateUI();
+          this.sound.playPop(460);
+          this.showToast(`新しい引き継ぎコード「${newCode}」を発行しました`);
+        });
+
+        const modalTrId = document.getElementById('input-modal-transfer-id');
+        if (modalTrId) {
+          modalTrId.addEventListener('input', (e) => {
+            const digits = e.target.value.replace(/[^0-9]/g, '').slice(0, 6);
+            if (e.target.value !== digits) e.target.value = digits;
+          });
+        }
+        const modalTrCode = document.getElementById('input-modal-transfer-code');
+        if (modalTrCode) {
+          modalTrCode.addEventListener('input', (e) => {
+            const digits = e.target.value.replace(/[^0-9]/g, '').slice(0, 4);
+            if (e.target.value !== digits) e.target.value = digits;
+          });
+        }
+
+        on('btn-exec-modal-transfer', 'click', async () => {
+          const idVal = document.getElementById('input-modal-transfer-id').value;
+          const codeVal = document.getElementById('input-modal-transfer-code').value;
+          await this.performTransferLoad(idVal, codeVal);
+        });
+
         on('btn-regenerate-start-id', 'click', () => {
           this.pendingStartAccountId = this.storage.generateAccountId();
           this.sound.playPop(420);
@@ -2313,7 +2626,9 @@
             this.state.user.ownerName = ownerVal.slice(0, 12);
             const desiredId = this.pendingStartAccountId || this.state.user.accountId;
             this.state.user.accountId = await this.storage.reserveUniqueAccountId(desiredId, this.state.user.uid);
+            this.state.user.transferCode = this.pendingStartTransferCode || this.state.user.transferCode || this.storage.generateTransferCode();
             this.pendingStartAccountId = this.state.user.accountId;
+            this.pendingStartTransferCode = this.state.user.transferCode;
             this.state.beaver.name = beaverVal.slice(0, 12);
             this.state.beaver.color = this.pendingBeaverCustom.color;
             this.state.beaver.bodyStyle = {
@@ -2323,7 +2638,7 @@
               tailSize: this.pendingBeaverCustom.tailSize
             };
             this.state.registered = true;
-            this.addActivityLog(`${this.state.user.ownerName}さんと ${this.state.beaver.name}（ID: ${this.state.user.accountId}）が川辺デビューしました！`, '#ico-beaver');
+            this.addActivityLog(`${this.state.user.ownerName}さんと ${this.state.beaver.name}（ID: ${this.state.user.accountId} / 引継コード: ${this.state.user.transferCode}）が川辺デビューしました！`, '#ico-beaver');
             this.sound.playChime();
             await this.storage.saveGameData(this.state);
             this.syncStartScreenState();
@@ -2404,6 +2719,7 @@
             onConfirm: async () => {
               this.state = await this.storage.resetGameData();
               this.pendingStartAccountId = this.state.user.accountId;
+              this.pendingStartTransferCode = this.state.user.transferCode;
               this.pendingBeaverCustom = {
                 color: this.state.beaver.color,
                 headSize: this.state.beaver.bodyStyle.headSize,
@@ -2583,6 +2899,7 @@
         setText('ui-beaver-name', activeBeaver.name);
         setText('ui-owner-name', isVisit ? this.visitingTarget.ownerName : this.state.user.ownerName);
         setText('ui-my-account-id', this.state.user.accountId);
+        setText('ui-my-transfer-code', this.state.user.transferCode || '0000');
         setText('ui-friends-badge', this.state.user.favoriteIds.length);
         setText('ui-favorite-count-label', `お気に入り: ${this.state.user.favoriteIds.length}人`);
 
