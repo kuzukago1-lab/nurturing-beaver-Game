@@ -1761,10 +1761,7 @@
         this.advanceGameClockByRealElapsed(Date.now() - this.state.user.lastUpdatedAt, false);
         this.applyElapsedTime(Date.now() - this.state.user.lastUpdatedAt);
         if (this.state.registered && this.state.user.accountId) {
-          const lockRes = await this.storage.acquireOrRenewSessionLock(this.state.user.accountId);
-          if (!lockRes.ok) {
-            this.showToast(lockRes.message);
-          }
+          // 起動時の自動ロック取得・更新は行わない（ログイン時・登録時のみチェック）
         }
         await this.storage.saveGameData(this.state);
 
@@ -1790,14 +1787,7 @@
           this.updateStaminaUI();
         }, 1000);
 
-        setInterval(async () => {
-          if (this.state && this.state.registered && this.state.user && this.state.user.accountId) {
-            const renewRes = await this.storage.acquireOrRenewSessionLock(this.state.user.accountId);
-            if (!renewRes.ok) {
-              this.showToast(renewRes.message);
-            }
-          }
-        }, 25000);
+        // プレイ中の定期ロックチェックは行わない（ログイン時・新規登録時のみチェック
 
         window.addEventListener('beforeunload', () => {
           this.storage.releaseSessionLock();
