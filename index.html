@@ -4336,16 +4336,37 @@
         ctx.scale(metrics.headScale, metrics.headScale);
         ctx.rotate(headNod + headTilt);
 
+        // 奥側の耳（少し後ろ・上方向）
         ctx.save();
-        ctx.translate(-3.5, -13.5 + sadLevel * 0.8);
-        ctx.rotate(-0.28 + sadLevel * 0.08);
-        ctx.fillStyle = '#5c3317';
+        ctx.translate(-6.8, -14.8 + sadLevel * 0.8 + (isSwimming ? dolphinWave * 0.8 : 0));
+        ctx.rotate(-0.45 + sadLevel * 0.08 + (isSwimming ? -0.15 : 0));
+        ctx.fillStyle = furColor;
+        ctx.strokeStyle = '#3b1d0c';
+        ctx.lineWidth = 1.2;
         ctx.beginPath();
-        ctx.ellipse(0, 0, 5.2, 3.3, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, 0, 5.0, 3.2, 0, 0, Math.PI * 2);
         ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(249, 168, 212, 0.72)';
+        ctx.beginPath();
+        ctx.ellipse(-0.3, 0.2, 2.5, 1.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        // 手前側の耳（頭部の手前・上側にずらしてはっきり表示）
+        ctx.save();
+        ctx.translate(0.5, -15.2 + sadLevel * 0.8 + (isSwimming ? dolphinWave * 0.8 : 0));
+        ctx.rotate(-0.12 + sadLevel * 0.08 + (isSwimming ? -0.08 : 0));
+        ctx.fillStyle = furColor;
+        ctx.strokeStyle = '#291206';
+        ctx.lineWidth = 1.35;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 5.4, 3.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
         ctx.fillStyle = '#f9a8d4';
         ctx.beginPath();
-        ctx.ellipse(-0.4, 0.2, 2.8, 1.7, 0, 0, Math.PI * 2);
+        ctx.ellipse(0.2, 0.2, 2.9, 1.8, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
 
