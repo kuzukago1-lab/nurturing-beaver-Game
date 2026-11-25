@@ -2332,19 +2332,26 @@
         }
         const ownerInput = document.getElementById('input-start-owner');
         const beaverInput = document.getElementById('input-start-beaver');
-        if (ownerInput && this.state.user.ownerName && this.state.user.ownerName !== 'あなた') {
-          ownerInput.value = this.state.user.ownerName;
-        }
-        if (beaverInput && this.state.beaver.name) {
-          beaverInput.value = this.state.beaver.name;
-        }
         const p1Input = document.getElementById('input-start-pass-1');
         const p2Input = document.getElementById('input-start-pass-2');
-        if (p1Input && !p1Input.value && /^\d{8}$/.test(String(this.pendingStartTransferCode || ''))) {
-          p1Input.value = this.pendingStartTransferCode;
-        }
-        if (p2Input && !p2Input.value && /^\d{8}$/.test(String(this.pendingStartTransferCode || ''))) {
-          p2Input.value = this.pendingStartTransferCode;
+        if (!this.state.registered) {
+          if (ownerInput) ownerInput.value = '';
+          if (beaverInput) beaverInput.value = '';
+          if (p1Input) p1Input.value = '';
+          if (p2Input) p2Input.value = '';
+        } else {
+          if (ownerInput && this.state.user.ownerName && this.state.user.ownerName !== 'あなた') {
+            ownerInput.value = this.state.user.ownerName;
+          }
+          if (beaverInput && this.state.beaver.name) {
+            beaverInput.value = this.state.beaver.name;
+          }
+          if (p1Input && !p1Input.value && /^\d{8}$/.test(String(this.pendingStartTransferCode || ''))) {
+            p1Input.value = this.pendingStartTransferCode;
+          }
+          if (p2Input && !p2Input.value && /^\d{8}$/.test(String(this.pendingStartTransferCode || ''))) {
+            p2Input.value = this.pendingStartTransferCode;
+          }
         }
         this.renderStartCustomizationOptions();
 
@@ -3323,6 +3330,10 @@
               this.state = await this.storage.resetGameData();
               this.pendingStartAccountId = this.state.user.accountId;
               this.pendingStartTransferCode = '';
+              ['input-start-owner', 'input-start-beaver', 'input-start-pass-1', 'input-start-pass-2'].forEach((id) => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+              });
               this.pendingBeaverCustom = {
                 color: this.state.beaver.color,
                 headSize: this.state.beaver.bodyStyle.headSize,
