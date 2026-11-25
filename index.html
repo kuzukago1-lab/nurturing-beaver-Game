@@ -83,7 +83,7 @@
 <body class="min-h-screen flex flex-col items-center justify-between bg-gradient-to-b from-emerald-100 via-amber-50 to-orange-100 p-2 sm:p-4">
 
   <!-- 画面拡大・縮小コントローラー（常時右下に配置） -->
-  <div id="ui-zoom-controls" class="fixed bottom-4 right-3 sm:right-5 z-50 flex items-center gap-1 bg-white/95 backdrop-blur px-2 py-1.5 rounded-2xl shadow-lg border-2 border-amber-300">
+  <div id="ui-zoom-controls" class="fixed bottom-4 right-3 sm:right-5 z-20 flex items-center gap-1 bg-white/95 backdrop-blur px-2 py-1.5 rounded-2xl shadow-lg border-2 border-amber-300">
     <button type="button" id="btn-zoom-out" title="画面を縮小" class="w-7 h-7 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-950 font-extrabold text-sm flex items-center justify-center transition">
       －
     </button>
@@ -93,6 +93,18 @@
     <button type="button" id="btn-zoom-in" title="画面を拡大" class="w-7 h-7 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-950 font-extrabold text-sm flex items-center justify-center transition">
       ＋
     </button>
+  </div>
+  
+  <!-- トップページ（タイトルとゲームスタートボタンのみ） -->
+  <div id="top-page-overlay" class="start-backdrop fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="w-full max-w-md bg-white/95 backdrop-blur rounded-3xl p-6 sm:p-8 shadow-2xl border-4 border-amber-300 flex flex-col items-center text-center gap-6">
+      <h1 class="text-2xl sm:text-3xl font-extrabold text-amber-950 tracking-tight">
+        もくもく川辺のビーバー育成記
+      </h1>
+      <button type="button" id="btn-top-game-start" class="btn-game w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-500 hover:from-emerald-600 hover:to-teal-600 text-white font-extrabold text-base sm:text-lg shadow-lg border-b-4 border-emerald-700">
+        ゲームスタート
+      </button>
+    </div>
   </div>
 
   <!-- スタート画面（初回または未登録時に表示する飼い主登録＆8桁パスワード認証画面） -->
@@ -1440,15 +1452,45 @@
             const snap = await fb.getDoc(userDocRef);
             this.onlineConnected = true;
 
+            const mergeRemoteGuestbook = async (targetData) => {
+              try {
+                const gbSnap = await fb.getDocs(fb.collection(fb.db, 'players', this.uid, 'guestbook'));
+                if (gbSnap && !gbSnap.empty) {
+                  const map = new Map();
+                  (targetData.guestbook || []).forEach((item) => {
+                    if (item && item.id) map.set(item.id, item);
+                  });
+                  gbSnap.forEach((docSnap) => {
+                    const d = docSnap.data() || {};
+                    map.set(docSnap.id, {
+                      id: docSnap.id,
+                      visitorName: d.visitorName || 'ななしの訪問者',
+                      beaverName: d.beaverName || 'ビーバー',
+                      action: d.action || 'visit',
+                      message: d.message || '遊びに来たよ！',
+                      timestamp: Number(d.timestamp || Date.now())
+                    });
+                  });
+                  targetData.guestbook = Array.from(map.values())
+                    .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
+                    .slice(0, 50);
+                }
+              } catch (gbErr) {
+                console.warn('ゲストブックの同期をスキップしました:', gbErr);
+              }
+            };
+
             if (snap.exists()) {
               const cloudData = this.normalizeLoadedData(snap.data());
               cloudData.user.uid = this.uid;
               if (localData && (localData.user.lastUpdatedAt || 0) > (cloudData.user.lastUpdatedAt || 0)) {
                 localData.user.uid = this.uid;
+                await mergeRemoteGuestbook(localData);
                 localStorage.setItem(this.storageKey, JSON.stringify(localData));
                 this.updateSyncBadge('オンライン同期済 (Firebase)', true);
                 return localData;
               }
+              await mergeRemoteGuestbook(cloudData);
               localStorage.setItem(this.storageKey, JSON.stringify(cloudData));
               this.updateSyncBadge('オンライン同期済 (Firebase)', true);
               return cloudData;
@@ -1457,6 +1499,7 @@
             const base = localData || this.getDefaultData();
             base.user.uid = this.uid;
             base.user.accountId = await this.reserveUniqueAccountId(base.user.accountId, this.uid);
+            await mergeRemoteGuestbook(base);
             localStorage.setItem(this.storageKey, JSON.stringify(base));
             await this.saveGameData(base);
             this.updateSyncBadge('オンライン同期済 (Firebase)', true);
@@ -1769,6 +1812,7 @@
         this.setupCanvas();
         this.bindEvents();
         this.syncStartScreenState();
+        this.syncTopPageState();
         this.updateUI();
         this.renderActivityLogs();
         this.renderNeighbors();
@@ -2171,7 +2215,33 @@
         renderGroup('start-tail-size-options', 'tailSize');
       }
 
+      syncTopPageState() {
+        const topEl = document.getElementById('top-page-overlay');
+        const startEl = document.getElementById('start-screen-overlay');
+        if (!topEl) return;
+
+        const isTopVisible = !topEl.classList.contains('hidden');
+        if (isTopVisible && startEl) {
+          startEl.classList.add('hidden');
+          startEl.classList.remove('flex');
+        }
+      }
+
+      handleTopGameStart() {
+        const topEl = document.getElementById('top-page-overlay');
+        if (topEl) {
+          topEl.classList.add('hidden');
+        }
+        this.sound.playPop(460);
+
+        this.syncStartScreenState();
+        if (this.state && this.state.registered) {
+          this.updateUI();
+        }
+      }
+
       syncStartScreenState() {
+        const topEl = document.getElementById('top-page-overlay');
         const overlay = document.getElementById('start-screen-overlay');
         if (!overlay) return;
         const previewIdEl = document.getElementById('start-preview-id');
@@ -2195,6 +2265,13 @@
           p2Input.value = this.pendingStartTransferCode;
         }
         this.renderStartCustomizationOptions();
+
+        if (topEl && !topEl.classList.contains('hidden')) {
+          overlay.classList.add('hidden');
+          overlay.classList.remove('flex');
+          return;
+        }
+
         const isRegistered = Boolean(this.state.registered);
         overlay.classList.toggle('hidden', isRegistered);
         overlay.classList.toggle('flex', !isRegistered);
@@ -2902,6 +2979,8 @@
           this.sound.playPop(400);
         });
 
+        on('btn-top-game-start', 'click', () => this.handleTopGameStart());
+
         const startTrId = document.getElementById('input-start-transfer-id');
         if (startTrId) {
           startTrId.addEventListener('input', (e) => {
@@ -3022,46 +3101,57 @@
         if (startForm) {
           startForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const ownerVal = (document.getElementById('input-start-owner').value || '').trim();
-            const beaverVal = (document.getElementById('input-start-beaver').value || '').trim();
-            const p1Val = document.getElementById('input-start-pass-1') ? document.getElementById('input-start-pass-1').value : '';
-            const p2Val = document.getElementById('input-start-pass-2') ? document.getElementById('input-start-pass-2').value : '';
-            if (!ownerVal || !beaverVal) {
-              this.showToast('飼い主の名前とビーバーの名前をどちらも入力してください');
-              return;
+            const submitBtn = startForm.querySelector('button[type="submit"]');
+            if (submitBtn) submitBtn.disabled = true;
+
+            try {
+              const ownerVal = (document.getElementById('input-start-owner').value || '').trim();
+              const beaverVal = (document.getElementById('input-start-beaver').value || '').trim();
+              const p1Val = document.getElementById('input-start-pass-1') ? document.getElementById('input-start-pass-1').value : '';
+              const p2Val = document.getElementById('input-start-pass-2') ? document.getElementById('input-start-pass-2').value : '';
+              if (!ownerVal || !beaverVal) {
+                this.showToast('飼い主の名前とビーバーの名前をどちらも入力してください');
+                return;
+              }
+              const passCheck = this.validateTwoStepPassword8(p1Val, p2Val);
+              if (!passCheck.ok) {
+                this.showToast(passCheck.message);
+                return;
+              }
+              this.state.user.ownerName = ownerVal.slice(0, 12);
+              const desiredId = this.pendingStartAccountId || this.state.user.accountId;
+              const lockCheck = await this.storage.checkAccountSessionLock(desiredId, false);
+              if (lockCheck.lockedByOther) {
+                this.showToast(lockCheck.message);
+                return;
+              }
+              this.state.user.accountId = await this.storage.reserveUniqueAccountId(desiredId, this.state.user.uid);
+              this.state.user.transferCode = passCheck.password8;
+              await this.storage.acquireOrRenewSessionLock(this.state.user.accountId);
+              this.pendingStartAccountId = this.state.user.accountId;
+              this.pendingStartTransferCode = this.state.user.transferCode;
+              this.state.beaver.name = beaverVal.slice(0, 12);
+              this.state.beaver.color = this.pendingBeaverCustom.color;
+              this.state.beaver.bodyStyle = {
+                headSize: this.pendingBeaverCustom.headSize,
+                waistSize: this.pendingBeaverCustom.waistSize,
+                tailLength: this.pendingBeaverCustom.tailLength,
+                tailSize: this.pendingBeaverCustom.tailSize
+              };
+              this.state.registered = true;
+              this.addActivityLog(`${this.state.user.ownerName}さんと ${this.state.beaver.name}（ID: ${this.state.user.accountId}）が川辺デビューしました！`, '#ico-beaver');
+              this.sound.playChime();
+              await this.storage.saveGameData(this.state);
+              this.syncStartScreenState();
+              this.updateUI();
+              this.showToast(`${this.state.beaver.name}との川辺生活がスタートしました！`);
+            } catch (err) {
+              console.error('新規登録処理エラー:', err);
+              const msg = err && err.message ? err.message : '登録処理中にエラーが発生しました。時間をおいて再度お試しください。';
+              this.showToast(msg);
+            } finally {
+              if (submitBtn) submitBtn.disabled = false;
             }
-            const passCheck = this.validateTwoStepPassword8(p1Val, p2Val);
-            if (!passCheck.ok) {
-              this.showToast(passCheck.message);
-              return;
-            }
-            this.state.user.ownerName = ownerVal.slice(0, 12);
-            const desiredId = this.pendingStartAccountId || this.state.user.accountId;
-            const lockCheck = await this.storage.checkAccountSessionLock(desiredId, false);
-            if (lockCheck.lockedByOther) {
-              this.showToast(lockCheck.message);
-              return;
-            }
-            this.state.user.accountId = await this.storage.reserveUniqueAccountId(desiredId, this.state.user.uid);
-            this.state.user.transferCode = passCheck.password8;
-            await this.storage.acquireOrRenewSessionLock(this.state.user.accountId);
-            this.pendingStartAccountId = this.state.user.accountId;
-            this.pendingStartTransferCode = this.state.user.transferCode;
-            this.state.beaver.name = beaverVal.slice(0, 12);
-            this.state.beaver.color = this.pendingBeaverCustom.color;
-            this.state.beaver.bodyStyle = {
-              headSize: this.pendingBeaverCustom.headSize,
-              waistSize: this.pendingBeaverCustom.waistSize,
-              tailLength: this.pendingBeaverCustom.tailLength,
-              tailSize: this.pendingBeaverCustom.tailSize
-            };
-            this.state.registered = true;
-            this.addActivityLog(`${this.state.user.ownerName}さんと ${this.state.beaver.name}（ID: ${this.state.user.accountId}）が川辺デビューしました！`, '#ico-beaver');
-            this.sound.playChime();
-            await this.storage.saveGameData(this.state);
-            this.syncStartScreenState();
-            this.updateUI();
-            this.showToast(`${this.state.beaver.name}との川辺生活がスタートしました！`);
           });
         }
 
@@ -4196,18 +4286,22 @@
         }
         ctx.fillStyle = '#4a2511';
         ctx.beginPath();
-        ctx.ellipse(-3.5, 2, 8.8, 5.2, -0.15, 0, Math.PI * 2);
+        ctx.ellipse(isSwimming ? -3.5 : 3.5, 2, 8.8, 5.2, isSwimming ? -0.15 : 0.15, 0, Math.PI * 2);
         ctx.fill();
         if (!isSwimming) {
+          ctx.fillStyle = 'rgba(251, 182, 206, 0.55)';
+          ctx.beginPath();
+          ctx.ellipse(4.8, 2.8, 4.0, 2.2, 0, 0, Math.PI * 2);
+          ctx.fill();
           ctx.strokeStyle = '#fef3c7';
           ctx.lineWidth = 1.1;
           ctx.beginPath();
-          ctx.moveTo(-8, 1);
-          ctx.lineTo(-11, 0);
-          ctx.moveTo(-9, 3);
-          ctx.lineTo(-12, 3);
-          ctx.moveTo(-8, 5);
-          ctx.lineTo(-11, 6);
+          ctx.moveTo(8, 1);
+          ctx.lineTo(11, 0);
+          ctx.moveTo(9, 3);
+          ctx.lineTo(12, 3);
+          ctx.moveTo(8, 5);
+          ctx.lineTo(11, 6);
           ctx.stroke();
         }
         ctx.restore();
@@ -4295,22 +4389,22 @@
         }
         ctx.fillStyle = '#5c3317';
         ctx.beginPath();
-        ctx.ellipse(-2.5, 2, 9.8, 5.8, -0.1, 0, Math.PI * 2);
+        ctx.ellipse(isSwimming ? -2.5 : 2.5, 2, 9.8, 5.8, isSwimming ? -0.1 : 0.1, 0, Math.PI * 2);
         ctx.fill();
         if (!isSwimming) {
           ctx.fillStyle = 'rgba(251, 182, 206, 0.65)';
           ctx.beginPath();
-          ctx.ellipse(-4, 3, 4.5, 2.5, 0, 0, Math.PI * 2);
+          ctx.ellipse(4, 3, 4.5, 2.5, 0, 0, Math.PI * 2);
           ctx.fill();
           ctx.strokeStyle = '#3b1d0c';
           ctx.lineWidth = 1.2;
           ctx.beginPath();
-          ctx.moveTo(-9, 0.5);
-          ctx.lineTo(-12, -0.5);
-          ctx.moveTo(-10.5, 2.5);
-          ctx.lineTo(-13.5, 2.5);
-          ctx.moveTo(-9, 4.5);
-          ctx.lineTo(-12, 5.5);
+          ctx.moveTo(9, 0.5);
+          ctx.lineTo(12, -0.5);
+          ctx.moveTo(10.5, 2.5);
+          ctx.lineTo(13.5, 2.5);
+          ctx.moveTo(9, 4.5);
+          ctx.lineTo(12, 5.5);
           ctx.stroke();
         }
         ctx.restore();
