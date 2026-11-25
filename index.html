@@ -1,0 +1,3766 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>もくもく川辺のビーバー育成記</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: 温かみのある丸ゴシック -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap" rel="stylesheet">
+  <style>
+    /* 全体のフォントとタッチ操作最適化 */
+    body {
+      font-family: 'M PLUS Rounded 1c', sans-serif;
+      background-color: #ecfdf5;
+      color: #451a03;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      overflow-x: hidden;
+    }
+
+    /* カスタムスクロールバー */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #fef3c7;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #d97706;
+      border-radius: 9999px;
+    }
+
+    /* ボタンのぷにっとした押し心地 */
+    .btn-game {
+      transition: transform 0.1s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.1s ease;
+    }
+    .btn-game:active:not(:disabled) {
+      transform: translateY(3px) scale(0.97);
+    }
+
+    /* キャンバスコンテナの影と枠 */
+    .canvas-frame {
+      box-shadow: 0 10px 25px -5px rgba(69, 26, 3, 0.15), inset 0 2px 4px rgba(255, 255, 255, 0.6);
+    }
+
+    /* 通知トーストのアニメーション */
+    @keyframes popIn {
+      0% { opacity: 0; transform: translateY(16px) scale(0.92); }
+      100% { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .toast-anim {
+      animation: popIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+
+    /* 共通インラインSVGアイコンの整列 */
+    .game-icon {
+      display: inline-block;
+      vertical-align: -0.18em;
+      flex-shrink: 0;
+    }
+
+    /* スタート画面オーバーレイ */
+    .start-backdrop {
+      background: radial-gradient(circle at top, rgba(209, 250, 229, 0.96), rgba(254, 243, 199, 0.97));
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-between bg-gradient-to-b from-emerald-100 via-amber-50 to-orange-100 p-2 sm:p-4">
+
+  <!-- スタート画面（初回または未登録時に表示する飼い主登録＆アカウントID発行画面） -->
+  <div id="start-screen-overlay" class="start-backdrop fixed inset-0 z-40 flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
+    <div class="w-full max-w-md bg-white/95 backdrop-blur rounded-3xl p-5 sm:p-6 shadow-2xl border-4 border-amber-300 my-auto">
+      <div class="flex flex-col items-center text-center mb-4">
+        <div class="w-16 h-16 rounded-3xl bg-amber-100 border-2 border-amber-400 flex items-center justify-center shadow-inner mb-2">
+          <svg class="w-12 h-12"><use href="#ico-beaver"/></svg>
+        </div>
+        <span class="px-3 py-0.5 rounded-full text-[11px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300 mb-1">
+          オンライン川辺デビュー
+        </span>
+        <h2 class="text-xl sm:text-2xl font-extrabold text-amber-950">もくもく川辺のビーバー育成記</h2>
+        <p class="text-xs text-amber-800 mt-1">
+          飼い主名とビーバーの名前を登録して、あなたのアカウントIDを発行しましょう。
+        </p>
+      </div>
+
+      <!-- 自動発行されるアカウントID表示 -->
+      <div class="bg-amber-50 border-2 border-amber-200 rounded-2xl p-3 mb-4">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] font-extrabold text-amber-800">あなたのアカウントID（フレンド検索用）</span>
+          <button type="button" id="btn-regenerate-start-id" class="text-[11px] font-bold text-amber-700 hover:text-amber-950 underline transition">
+            IDを変更
+          </button>
+        </div>
+        <div class="flex items-center justify-between mt-1.5 gap-2">
+          <code id="start-preview-id" class="text-base sm:text-lg font-extrabold tracking-wider text-amber-950 bg-white px-3 py-1 rounded-xl border border-amber-300 flex-1 text-center select-all">
+            BV-100001
+          </code>
+          <button type="button" id="btn-copy-start-id" class="px-3 py-1.5 rounded-xl bg-amber-200 hover:bg-amber-300 text-amber-950 text-xs font-extrabold transition shrink-0">
+            コピー
+          </button>
+        </div>
+      </div>
+
+      <!-- 飼い主＆ビーバー登録フォーム -->
+      <form id="start-register-form" class="space-y-3">
+        <div>
+          <label for="input-start-owner" class="block text-xs font-extrabold text-amber-950 mb-1">
+            飼い主の名前（最大12文字）
+          </label>
+          <input id="input-start-owner" type="text" maxlength="12" required placeholder="例：かわべのひなた" class="w-full px-3.5 py-2.5 rounded-xl border-2 border-amber-300 focus:border-amber-500 focus:outline-none font-bold text-sm text-amber-950 bg-amber-50/40">
+        </div>
+
+        <div>
+          <label for="input-start-beaver" class="block text-xs font-extrabold text-amber-950 mb-1">
+            ビーバーの名前（最大12文字）
+          </label>
+          <input id="input-start-beaver" type="text" maxlength="12" required placeholder="例：ぽんた" class="w-full px-3.5 py-2.5 rounded-xl border-2 border-amber-300 focus:border-amber-500 focus:outline-none font-bold text-sm text-amber-950 bg-amber-50/40">
+        </div>
+
+        <!-- ビーバー毛色（10色）選択 -->
+        <div class="bg-amber-50/80 border border-amber-200 rounded-2xl p-3">
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="text-xs font-extrabold text-amber-950">ビーバーの毛色（10色）</span>
+            <span id="start-selected-color-name" class="text-[11px] font-extrabold text-amber-800">きつねブラウン</span>
+          </div>
+          <div id="start-color-palette" class="grid grid-cols-5 gap-1.5">
+            <!-- JSで10色スウォッチを生成 -->
+          </div>
+        </div>
+
+        <!-- ビーバー体型（頭・腰まわり・尻尾の長さ・尻尾のサイズ 各3種類）選択 -->
+        <div class="bg-amber-50/80 border border-amber-200 rounded-2xl p-3 space-y-2.5">
+          <div class="text-xs font-extrabold text-amber-950">ビーバーの体型（各3種類）</div>
+
+          <div>
+            <span class="block text-[11px] font-bold text-amber-800 mb-1">頭サイズ</span>
+            <div id="start-head-options" class="grid grid-cols-3 gap-1.5"></div>
+          </div>
+
+          <div>
+            <span class="block text-[11px] font-bold text-amber-800 mb-1">腰まわりサイズ</span>
+            <div id="start-waist-options" class="grid grid-cols-3 gap-1.5"></div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div>
+              <span class="block text-[11px] font-bold text-amber-800 mb-1">尻尾の長さ</span>
+              <div id="start-tail-length-options" class="grid grid-cols-3 gap-1"></div>
+            </div>
+            <div>
+              <span class="block text-[11px] font-bold text-amber-800 mb-1">尻尾のサイズ（太さ）</span>
+              <div id="start-tail-size-options" class="grid grid-cols-3 gap-1"></div>
+            </div>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-game w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-500 hover:from-emerald-600 hover:to-teal-600 text-white font-extrabold text-sm sm:text-base shadow-lg border-b-4 border-emerald-700 mt-2">
+          この内容で川辺をはじめる
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- 再利用可能な環境非依存SVGアイコンスプライト定義 -->
+  <svg xmlns="http://www.w3.org/2000/svg" class="hidden" aria-hidden="true">
+    <!-- ビーバー顔アイコン -->
+    <symbol id="ico-beaver" viewBox="0 0 32 32">
+      <path d="M5.2 14.3C4.4 14.5 4.3 15.6 5.1 16.0L8.2 16.8C8.9 17.0 9.4 16.4 9.2 15.6L8.4 13.8C7.8 13.0 6.2 13.5 5.2 14.3Z" fill="#5c3317"/>
+      <path d="M5.9 14.7L7.9 15.3L7.3 14.1C6.9 13.8 6.3 14.0 5.9 14.7Z" fill="#f9a8d4"/>
+      <path d="M26.8 14.3C27.6 14.5 27.7 15.6 26.9 16.0L23.8 16.8C23.1 17.0 22.6 16.4 22.8 15.6L23.6 13.8C24.2 13.0 25.8 13.5 26.8 14.3Z" fill="#5c3317"/>
+      <path d="M26.1 14.7L24.1 15.3L24.7 14.1C25.1 13.8 25.7 14.0 26.1 14.7Z" fill="#f9a8d4"/>
+      <path d="M8.5 11.5C10.5 7.2 21.5 7.2 23.5 11.5C26.2 14.5 26.5 20.5 23.2 24.2C20.5 26.8 11.5 26.8 8.8 24.2C5.5 20.5 5.8 14.5 8.5 11.5Z" fill="#9a5b25"/>
+      <ellipse cx="16" cy="20.4" rx="7.2" ry="4.8" fill="#fde68a"/>
+      <!-- 前歯（30%下に長く調整） -->
+      <rect x="14.0" y="21.6" width="1.7" height="4.9" rx="0.7" fill="#ffffff" stroke="#d6d3d1" stroke-width="0.5"/>
+      <rect x="16.3" y="21.6" width="1.7" height="4.9" rx="0.7" fill="#ffffff" stroke="#d6d3d1" stroke-width="0.5"/>
+      <ellipse cx="16" cy="17.3" rx="3.1" ry="2.1" fill="#292524"/>
+      <g stroke="#451a03" stroke-width="0.9" stroke-linecap="round" fill="none">
+        <path d="M12.0 18.2Q8.2 17.3 4.8 17.8"/>
+        <path d="M11.8 19.4Q8.0 19.4 4.5 20.3"/>
+        <path d="M12.2 20.5Q8.6 21.4 5.4 22.6"/>
+        <path d="M20.0 18.2Q23.8 17.3 27.2 17.8"/>
+        <path d="M20.2 19.4Q24.0 19.4 27.5 20.3"/>
+        <path d="M19.8 20.5Q23.4 21.4 26.6 22.6"/>
+      </g>
+      <circle cx="11.3" cy="15.0" r="1.5" fill="#1c1917"/>
+      <circle cx="11.8" cy="14.5" r="0.5" fill="#ffffff"/>
+      <circle cx="20.7" cy="15.0" r="1.5" fill="#1c1917"/>
+      <circle cx="21.2" cy="14.5" r="0.5" fill="#ffffff"/>
+      <!-- お髭より後ろの頬位置 -->
+      <circle cx="7.4" cy="17.8" r="1.9" fill="#f43f5e" fill-opacity="0.32"/>
+      <circle cx="24.6" cy="17.8" r="1.9" fill="#f43f5e" fill-opacity="0.32"/>
+    </symbol>
+
+    <!-- 流木（丸太）アイコン -->
+    <symbol id="ico-wood" viewBox="0 0 32 32">
+      <g transform="rotate(-22 16 16)">
+        <rect x="3" y="10" width="24" height="12" rx="5" fill="#92400e"/>
+        <path d="M7 13.5H19M9 18.5H17" stroke="#78350f" stroke-width="1.6" stroke-linecap="round"/>
+        <path d="M13 10L16 6.5" stroke="#92400e" stroke-width="3" stroke-linecap="round"/>
+        <ellipse cx="25" cy="16" rx="3.8" ry="5.5" fill="#fde68a" stroke="#78350f" stroke-width="1.3"/>
+        <circle cx="25" cy="16" r="1.4" fill="#d97706"/>
+      </g>
+    </symbol>
+
+    <!-- どんぐりアイコン -->
+    <symbol id="ico-acorn" viewBox="0 0 32 32">
+      <path d="M16 4C16.5 2.5 18 2 19.5 2.5" stroke="#5c3317" stroke-width="2.4" stroke-linecap="round" fill="none"/>
+      <path d="M8 14C8 22 11.5 27.5 16 29C20.5 27.5 24 22 24 14Z" fill="#d97706"/>
+      <path d="M7 13C7 9.2 11 7 16 7C21 7 25 9.2 25 13C25 14.5 23.5 15.2 16 15.2C8.5 15.2 7 14.5 7 13Z" fill="#78350f"/>
+      <path d="M10 10.5L22 10.5M11.5 13L20.5 13" stroke="#451a03" stroke-width="1.1" stroke-linecap="round"/>
+    </symbol>
+
+    <!-- りんごアイコン -->
+    <symbol id="ico-apple" viewBox="0 0 32 32">
+      <path d="M16 8C16 5.5 17.5 4 19.5 3.5" stroke="#78350f" stroke-width="2.2" stroke-linecap="round" fill="none"/>
+      <path d="M16.5 7.5C19 5.5 23 6 23.5 8.5C21.5 10.2 18.2 9.8 16.5 7.5Z" fill="#22c55e"/>
+      <path d="M16 9.5C12.5 8 7.5 10 7.5 16.5C7.5 23 11.8 28 15 28C15.6 28 16 27.6 16 27.6C16 27.6 16.4 28 17 28C20.2 28 24.5 23 24.5 16.5C24.5 10 19.5 8 16 9.5Z" fill="#ef4444"/>
+      <ellipse cx="11.5" cy="14" rx="1.6" ry="3" transform="rotate(-20 11.5 14)" fill="#fca5a5" fill-opacity="0.7"/>
+    </symbol>
+
+    <!-- 若枝・葉っぱアイコン -->
+    <symbol id="ico-branch" viewBox="0 0 32 32">
+      <path d="M6 26C12 20 19 14 26 7" stroke="#78350f" stroke-width="2.6" stroke-linecap="round" fill="none"/>
+      <path d="M14 18C10 16 8 12 11 9C14 10 16 14 14 18Z" fill="#22c55e"/>
+      <path d="M20 13C24 12 27 15 25 18C22 18 19 16 20 13Z" fill="#16a34a"/>
+      <path d="M23 9C22 5 25 3 28 5C28 8 26 10 23 9Z" fill="#4ade80"/>
+    </symbol>
+
+    <!-- ハートアイコン -->
+    <symbol id="ico-heart" viewBox="0 0 32 32">
+      <path d="M16 27.5C16 27.5 5 20.2 5 12.2C5 8.5 7.8 5.8 11.2 5.8C13.4 5.8 15.1 6.9 16 8.5C16.9 6.9 18.6 5.8 20.8 5.8C24.2 5.8 27 8.5 27 12.2C27 20.2 16 27.5 16 27.5Z" fill="#f43f5e"/>
+      <ellipse cx="10.5" cy="10.8" rx="1.8" ry="1.1" transform="rotate(-30 10.5 10.8)" fill="#fda4af"/>
+    </symbol>
+
+    <!-- なでなで手アイコン -->
+    <symbol id="ico-pet" viewBox="0 0 32 32">
+      <path d="M11 16V8.5C11 7.4 11.9 6.5 13 6.5C14.1 6.5 15 7.4 15 8.5V14M15 13V7.5C15 6.4 15.9 5.5 17 5.5C18.1 5.5 19 6.4 19 7.5V14M19 14V9.5C19 8.4 19.9 7.5 21 7.5C22.1 7.5 23 8.4 23 9.5V19C23 24 19.5 27.5 15 27.5C11.2 27.5 8.5 25 7.5 21.5L6.2 17.5C5.8 16.4 6.5 15.2 7.6 15C8.5 14.8 9.4 15.3 9.8 16.2L11 18.5" fill="#fde68a" stroke="#92400e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+
+    <!-- ダム建築（ハンマー＆丸太）アイコン -->
+    <symbol id="ico-dam" viewBox="0 0 32 32">
+      <rect x="4" y="19" width="24" height="7" rx="3" fill="#78350f"/>
+      <rect x="7" y="13" width="18" height="6" rx="2.5" fill="#b45309"/>
+      <path d="M18 14L25 7" stroke="#fef3c7" stroke-width="2.6" stroke-linecap="round"/>
+      <rect x="21" y="4" width="7" height="4" rx="1.2" transform="rotate(45 24.5 6)" fill="#451a03"/>
+    </symbol>
+
+    <!-- カヌー・おでかけアイコン -->
+    <symbol id="ico-canoe" viewBox="0 0 32 32">
+      <path d="M3 18C7 24 25 24 29 18C24 20 8 20 3 18Z" fill="#b45309" stroke="#78350f" stroke-width="1.4" stroke-linejoin="round"/>
+      <path d="M12 10L21 23" stroke="#78350f" stroke-width="2.2" stroke-linecap="round"/>
+      <path d="M4 25.5Q10 23.5 16 25.5T28 25.5" stroke="#0284c7" stroke-width="2" stroke-linecap="round" fill="none"/>
+    </symbol>
+
+    <!-- ギフトボックスアイコン -->
+    <symbol id="ico-gift" viewBox="0 0 32 32">
+      <rect x="6" y="13" width="20" height="14" rx="2.5" fill="#f59e0b"/>
+      <rect x="4.5" y="9.5" width="23" height="4.5" rx="1.5" fill="#fbbf24"/>
+      <rect x="14.2" y="9.5" width="3.6" height="17.5" fill="#f43f5e"/>
+      <path d="M16 9.5C13.5 9.5 10.5 8 11 5.8C11.5 4 14.5 5.2 16 9.5ZM16 9.5C18.5 9.5 21.5 8 21 5.8C20.5 4 17.5 5.2 16 9.5Z" fill="#f43f5e"/>
+    </symbol>
+
+    <!-- 本・ルールガイドアイコン -->
+    <symbol id="ico-book" viewBox="0 0 32 32">
+      <path d="M5 7C9 6 13.5 7 16 9C18.5 7 23 6 27 7V24C23 23 18.5 24 16 26C13.5 24 9 23 5 24V7Z" fill="#fef3c7" stroke="#92400e" stroke-width="2" stroke-linejoin="round"/>
+      <path d="M16 9V26" stroke="#92400e" stroke-width="1.8"/>
+    </symbol>
+
+    <!-- スピーカー（オン・オフ）アイコン -->
+    <symbol id="ico-sound-on" viewBox="0 0 32 32">
+      <path d="M6 12H11L17 7V25L11 20H6V12Z" fill="#57534e"/>
+      <path d="M21 11.5C22.8 13.2 22.8 18.8 21 20.5M24 8.5C27.2 11.8 27.2 20.2 24 23.5" stroke="#57534e" stroke-width="2.2" stroke-linecap="round" fill="none"/>
+    </symbol>
+    <symbol id="ico-sound-off" viewBox="0 0 32 32">
+      <path d="M6 12H11L17 7V25L11 20H6V12Z" fill="#a8a29e"/>
+      <path d="M21 12L27 20M27 12L21 20" stroke="#ef4444" stroke-width="2.4" stroke-linecap="round"/>
+    </symbol>
+
+    <!-- 鉛筆・編集アイコン -->
+    <symbol id="ico-edit" viewBox="0 0 32 32">
+      <path d="M7 21.5L20.5 8L24 11.5L10.5 25H7V21.5Z" fill="#d97706" stroke="#78350f" stroke-width="1.6" stroke-linejoin="round"/>
+    </symbol>
+
+    <!-- キラキラアイコン -->
+    <symbol id="ico-sparkle" viewBox="0 0 32 32">
+      <path d="M16 3L18.8 13.2L29 16L18.8 18.8L16 29L13.2 18.8L3 16L13.2 13.2L16 3Z" fill="#facc15" stroke="#eab308" stroke-width="1.2" stroke-linejoin="round"/>
+    </symbol>
+  </svg>
+
+  <!-- メインコンテナ -->
+  <div class="w-full max-w-3xl flex flex-col gap-3">
+
+    <!-- 上部ステータスバー -->
+    <header class="bg-white/90 backdrop-blur-md rounded-2xl p-3 sm:p-4 shadow-md border-2 border-amber-200">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <!-- ビーバー名＆成長段階 -->
+        <div class="flex items-center gap-2.5">
+          <div class="w-11 h-11 rounded-2xl bg-amber-100 border-2 border-amber-400 flex items-center justify-center shadow-inner">
+            <svg class="w-8 h-8"><use href="#ico-beaver"/></svg>
+          </div>
+          <div>
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <h1 id="ui-beaver-name" class="text-lg sm:text-xl font-extrabold text-amber-950 tracking-tight">ぽんた</h1>
+              <button id="btn-edit-name" title="名前を変更" class="p-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-800 text-xs font-bold transition inline-flex items-center gap-1">
+                <svg class="w-3.5 h-3.5"><use href="#ico-edit"/></svg>
+                <span>変更</span>
+              </button>
+              <span id="ui-stage-badge" class="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-emerald-500 text-white shadow-sm">
+                赤ちゃん
+              </span>
+            </div>
+            <p class="text-xs text-amber-700 font-bold mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+              <span>飼い主: <strong id="ui-owner-name" class="text-amber-950">あなた</strong></span>
+              <span class="text-amber-300">|</span>
+              <button type="button" id="btn-copy-my-id" title="クリックでアカウントIDをコピー" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-100 hover:bg-amber-200 text-amber-950 font-extrabold transition">
+                <span>ID: <span id="ui-my-account-id">BV-000000</span></span>
+                <span class="text-[10px] text-amber-700">[コピー]</span>
+              </button>
+              <span class="text-amber-300">|</span>
+              <span>ダムLv.<span id="ui-dam-level" class="text-sm text-amber-900">1</span> (<span id="ui-dam-progress">0</span>)</span>
+            </p>
+          </div>
+        </div>
+
+        <!-- 所持リソース＆サウンド・設定 -->
+        <div class="flex items-center gap-2 ml-auto">
+          <div class="flex items-center gap-1.5 bg-amber-50 border border-amber-300 px-3 py-1.5 rounded-xl shadow-sm">
+            <svg class="w-5 h-5 shrink-0"><use href="#ico-wood"/></svg>
+            <div>
+              <div class="text-[10px] leading-none text-amber-700 font-bold">流木</div>
+              <div id="ui-wood-count" class="text-sm sm:text-base font-extrabold text-amber-950 leading-tight">6</div>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-1.5 bg-yellow-50 border border-yellow-300 px-3 py-1.5 rounded-xl shadow-sm">
+            <svg class="w-5 h-5 shrink-0"><use href="#ico-acorn"/></svg>
+            <div>
+              <div class="text-[10px] leading-none text-yellow-700 font-bold">ツヤツヤのどんぐり</div>
+              <div id="ui-coin-count" class="text-sm sm:text-base font-extrabold text-yellow-900 leading-tight">35</div>
+            </div>
+          </div>
+
+          <button id="btn-sound-toggle" title="効果音オン/オフ" class="p-2.5 rounded-xl bg-stone-100 hover:bg-stone-200 border border-stone-300 text-stone-700 transition flex items-center justify-center">
+            <svg id="ui-sound-icon" class="w-5 h-5"><use href="#ico-sound-on"/></svg>
+          </button>
+
+          <button id="btn-how-to-play" title="ゲームの遊び方" class="px-3 py-2 rounded-xl bg-amber-100 hover:bg-amber-200 border border-amber-300 text-amber-900 text-xs sm:text-sm font-extrabold transition flex items-center gap-1.5 shadow-sm">
+            <svg class="w-4 h-4"><use href="#ico-book"/></svg>
+            <span class="hidden sm:inline">遊び方</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- まんぷく度・ごきげんメーター -->
+      <div class="grid grid-cols-2 gap-3 mt-3 pt-2.5 border-t border-amber-100">
+        <!-- まんぷく度メーター（100: 満腹マックス → 0: ペコペコで徐々に減っていく表示） -->
+        <div>
+          <div class="flex justify-between text-xs font-bold mb-1">
+            <span class="text-orange-800 inline-flex items-center gap-1">
+              <svg class="w-3.5 h-3.5"><use href="#ico-apple"/></svg> まんぷく度
+            </span>
+            <span id="ui-hunger-text" class="text-orange-950">80 / 100</span>
+          </div>
+          <div class="w-full h-3 bg-orange-100 rounded-full overflow-hidden border border-orange-200">
+            <div id="ui-hunger-bar" class="h-full bg-gradient-to-r from-rose-400 via-amber-400 to-emerald-500 rounded-full transition-all duration-300" style="width: 80%;"></div>
+          </div>
+        </div>
+        <!-- ごきげんメーター＆ボーナス表示 -->
+        <div>
+          <div class="flex justify-between text-xs font-bold mb-1">
+            <span class="text-pink-700 inline-flex items-center gap-1">
+              <svg class="w-3.5 h-3.5"><use href="#ico-heart"/></svg> ごきげん
+            </span>
+            <span id="ui-mood-text" class="text-pink-950">85 / 100</span>
+          </div>
+          <div class="w-full h-3 bg-pink-100 rounded-full overflow-hidden border border-pink-200">
+            <div id="ui-mood-bar" class="h-full bg-gradient-to-r from-pink-400 to-rose-400 rounded-full transition-all duration-300" style="width: 85%;"></div>
+          </div>
+          <div id="ui-mood-bonus-label" class="text-xs sm:text-sm font-normal text-pink-700 mt-1 text-right tracking-normal">
+            ★ ごきげん絶好調：流木2本率UP &amp; 建築効率+6%
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- メイン画面：川辺キャンバスエリア -->
+    <main class="relative w-full rounded-3xl overflow-hidden border-4 border-amber-300 bg-sky-200 canvas-frame">
+      <div id="canvas-wrapper" class="w-full h-[270px] sm:h-[340px] relative cursor-pointer">
+        <canvas id="game-canvas" class="block w-full h-full"></canvas>
+
+        <!-- 訪問中バナー -->
+        <div id="visiting-banner" class="hidden absolute top-3 left-3 right-3 bg-indigo-900/85 backdrop-blur text-white px-4 py-2 rounded-2xl flex items-center justify-between shadow-lg border border-indigo-400">
+          <div class="flex items-center gap-2 text-xs sm:text-sm font-bold">
+            <svg class="w-5 h-5 shrink-0"><use href="#ico-canoe"/></svg>
+            <span><strong id="visit-owner-name" class="text-amber-300"></strong> さんの川辺（<span id="visit-beaver-name"></span>）に遊びに来ています！</span>
+          </div>
+          <button id="btn-return-home" class="px-3 py-1 bg-amber-400 hover:bg-amber-300 text-amber-950 rounded-xl text-xs font-extrabold shadow transition shrink-0">
+            自宅へ帰る
+          </button>
+        </div>
+
+        <!-- オンライン状態インジケーター＆デバッグ時間経過ボタン -->
+        <div class="absolute bottom-2.5 left-3 right-3 flex items-center justify-between pointer-events-none">
+          <span id="ui-sync-status" class="pointer-events-auto inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/85 backdrop-blur text-[11px] font-bold text-emerald-800 shadow-sm border border-emerald-200">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            ローカル保存済 (Firebase連携対応)
+          </span>
+
+          <div class="pointer-events-auto flex items-center gap-1.5">
+            <span id="ui-game-time-badge" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-sky-900/80 backdrop-blur text-[11px] font-extrabold text-amber-100 shadow-sm border border-white/25">
+              ☀️ 昼（12:00）
+            </span>
+            <button id="btn-sim-time" class="px-2.5 py-1 rounded-full bg-amber-900/80 hover:bg-amber-900 text-amber-100 text-[11px] font-bold shadow-sm backdrop-blur transition" title="時間経過とお留守番中の変化をテストします">
+              ▶▶ 1時間経過テスト
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- アクションパネル（自分の川辺用 / 訪問先用で切り替え） -->
+    <section id="panel-home-actions" class="bg-white/95 rounded-2xl p-3 sm:p-4 shadow-md border-2 border-amber-200">
+      <!-- お世話スタミナ（時間回復・レベルに応じて上限上昇）ステータスバー -->
+      <div class="flex flex-wrap items-center justify-between gap-2 mb-2.5 pb-2 border-b border-amber-100">
+        <div class="flex items-center gap-1.5">
+          <span class="text-xs font-extrabold text-amber-950">お世話できる回数:</span>
+          <span id="ui-stamina-count" class="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-emerald-500 text-white shadow-2xs">10 / 10</span>
+        </div>
+        <span id="ui-stamina-timer" class="text-[11px] font-bold text-amber-700">まんたん！（3分ごとに1回回復・上限10回）</span>
+      </div>
+
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+        <button id="btn-feed-apple" class="btn-game flex flex-col items-center justify-center p-3 rounded-2xl bg-gradient-to-b from-rose-50 to-rose-100 hover:from-rose-100 hover:to-rose-200 border-2 border-rose-300 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
+          <svg class="w-7 h-7 mb-1"><use href="#ico-apple"/></svg>
+          <span class="text-xs sm:text-sm font-extrabold text-rose-950">りんごをあげる</span>
+          <span class="text-[11px] font-bold text-rose-700 mt-0.5 inline-flex items-center gap-1">
+            <svg class="w-3.5 h-3.5"><use href="#ico-acorn"/></svg> -5 / まんぷく+25
+          </span>
+        </button>
+
+        <button id="btn-feed-branch" class="btn-game flex flex-col items-center justify-center p-3 rounded-2xl bg-gradient-to-b from-lime-50 to-lime-100 hover:from-lime-100 hover:to-lime-200 border-2 border-lime-300 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
+          <svg class="w-7 h-7 mb-1"><use href="#ico-branch"/></svg>
+          <span class="text-xs sm:text-sm font-extrabold text-lime-950">若枝をかじる</span>
+          <span class="text-[11px] font-bold text-lime-700 mt-0.5">無料 / まんぷく+12</span>
+        </button>
+
+        <button id="btn-pet" class="btn-game flex flex-col items-center justify-center p-3 rounded-2xl bg-gradient-to-b from-pink-50 to-pink-100 hover:from-pink-100 hover:to-pink-200 border-2 border-pink-300 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
+          <div class="flex items-center gap-0.5 mb-1">
+            <svg class="w-7 h-7"><use href="#ico-pet"/></svg>
+            <svg class="w-5 h-5"><use href="#ico-heart"/></svg>
+          </div>
+          <span class="text-xs sm:text-sm font-extrabold text-pink-950">なでなでする</span>
+          <span class="text-[11px] font-bold text-pink-700 mt-0.5">ごきげん+15（MAX時回数消費なし）</span>
+        </button>
+
+        <button id="btn-gather" class="btn-game flex flex-col items-center justify-center p-3 rounded-2xl bg-gradient-to-b from-amber-50 to-amber-100 hover:from-amber-100 hover:to-amber-200 border-2 border-amber-300 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
+          <svg class="w-7 h-7 mb-1"><use href="#ico-wood"/></svg>
+          <span class="text-xs sm:text-sm font-extrabold text-amber-950">流木を集める</span>
+          <span class="text-[11px] font-bold text-amber-700 mt-0.5 inline-flex items-center gap-1">
+            流木+1〜2 / <svg class="w-3.5 h-3.5"><use href="#ico-acorn"/></svg>+2
+          </span>
+        </button>
+      </div>
+
+      <div class="mt-2.5">
+        <button id="btn-build-dam" class="btn-game w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 hover:from-amber-600 hover:to-orange-600 text-white font-extrabold shadow-md border-b-4 border-amber-700 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+          <svg class="w-6 h-6"><use href="#ico-dam"/></svg>
+          <span class="text-sm sm:text-base">ダムを建築する（流木 2本消費）</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- お世話＆変化ログ表示窓 -->
+    <section class="bg-white/95 rounded-2xl p-3 sm:p-4 shadow-md border-2 border-amber-200">
+      <div class="flex items-center justify-between mb-2">
+        <h2 class="text-xs sm:text-sm font-extrabold text-amber-950 inline-flex items-center gap-1.5">
+          <svg class="w-4 h-4"><use href="#ico-sparkle"/></svg>
+          <span>川辺の活動・変化ログ</span>
+        </h2>
+        <span class="text-[11px] font-bold text-amber-700">お世話・建築・時間経過を自動記録</span>
+      </div>
+      <div id="activity-log-window" class="max-h-32 overflow-y-auto space-y-1.5 bg-amber-50/70 rounded-xl p-2.5 border border-amber-200 text-xs">
+        <!-- JSで動的生成 -->
+      </div>
+    </section>
+
+    <!-- 訪問先アクションパネル（よその川辺訪問時のみ表示） -->
+    <section id="panel-visit-actions" class="hidden bg-indigo-50/95 rounded-2xl p-3 sm:p-4 shadow-md border-2 border-indigo-200">
+      <div class="grid grid-cols-2 gap-3">
+        <button id="btn-visit-pet" class="btn-game flex flex-col items-center justify-center p-3 rounded-2xl bg-white hover:bg-pink-50 border-2 border-pink-300 shadow-sm">
+          <div class="flex items-center gap-0.5 mb-1">
+            <svg class="w-7 h-7"><use href="#ico-pet"/></svg>
+            <svg class="w-5 h-5"><use href="#ico-heart"/></svg>
+          </div>
+          <span class="text-xs sm:text-sm font-extrabold text-pink-950">よその子をなでる</span>
+          <span class="text-[11px] font-bold text-pink-700 mt-0.5 inline-flex items-center gap-1">
+            お礼に <svg class="w-3.5 h-3.5"><use href="#ico-acorn"/></svg>+3 もらえる
+          </span>
+        </button>
+
+        <button id="btn-visit-gift" class="btn-game flex flex-col items-center justify-center p-3 rounded-2xl bg-white hover:bg-amber-50 border-2 border-amber-300 shadow-sm">
+          <div class="flex items-center gap-1 mb-1">
+            <svg class="w-6 h-6"><use href="#ico-gift"/></svg>
+            <svg class="w-6 h-6"><use href="#ico-wood"/></svg>
+          </div>
+          <span class="text-xs sm:text-sm font-extrabold text-amber-950">流木をおすそわけ</span>
+          <span class="text-[11px] font-bold text-amber-700 mt-0.5 inline-flex items-center gap-1">
+            流木1消費 → <svg class="w-3.5 h-3.5"><use href="#ico-acorn"/></svg>+8
+          </span>
+        </button>
+      </div>
+    </section>
+
+    <!-- オンライン交流＆ゲストブックタブエリア -->
+    <section class="bg-white/95 rounded-2xl p-3 sm:p-4 shadow-md border-2 border-amber-200">
+      <div class="flex items-center justify-between border-b-2 border-amber-100 pb-2 mb-3 gap-2 flex-wrap">
+        <div class="flex gap-1.5 sm:gap-2 flex-wrap">
+          <button id="tab-neighbors" class="px-3 py-1.5 rounded-xl text-xs sm:text-sm font-extrabold bg-amber-500 text-white shadow-sm transition inline-flex items-center gap-1.5">
+            <svg class="w-4 h-4"><use href="#ico-canoe"/></svg>
+            <span>よその川辺</span>
+          </button>
+          <button id="tab-friends" class="px-3 py-1.5 rounded-xl text-xs sm:text-sm font-extrabold bg-amber-100 text-amber-800 hover:bg-amber-200 transition inline-flex items-center gap-1.5">
+            <svg class="w-4 h-4"><use href="#ico-heart"/></svg>
+            <span>お気に入り・ID検索</span>
+            <span id="ui-friends-badge" class="ml-0.5 px-1.5 py-0.2 bg-rose-500 text-white rounded-full text-[10px]">0</span>
+          </button>
+          <button id="tab-guestbook" class="px-3 py-1.5 rounded-xl text-xs sm:text-sm font-extrabold bg-amber-100 text-amber-800 hover:bg-amber-200 transition inline-flex items-center gap-1.5">
+            <svg class="w-4 h-4"><use href="#ico-book"/></svg>
+            <span>訪問ログ</span>
+            <span id="ui-guestbook-badge" class="ml-0.5 px-1.5 py-0.2 bg-rose-500 text-white rounded-full text-[10px]">2</span>
+          </button>
+        </div>
+
+        <button id="btn-reset-save" class="text-[11px] font-bold text-stone-400 hover:text-rose-600 underline transition">
+          データ初期化
+        </button>
+      </div>
+
+      <div id="content-neighbors" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5"></div>
+
+      <div id="content-friends" class="hidden space-y-3">
+        <div class="bg-amber-50/90 border-2 border-amber-200 rounded-2xl p-3">
+          <label for="input-friend-search-id" class="block text-xs font-extrabold text-amber-950 mb-1.5">
+            アカウントIDの数字を入力して検索（例: 204819, 319042, 482710, 591024）
+          </label>
+          <div class="flex gap-2">
+            <div class="flex-1 flex items-center rounded-xl border-2 border-amber-300 focus-within:border-amber-500 bg-white overflow-hidden">
+              <span class="px-3 py-2 bg-amber-100 text-amber-900 font-extrabold text-xs sm:text-sm border-r border-amber-200 select-none shrink-0">
+                BV-
+              </span>
+              <input id="input-friend-search-id" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="6桁の半角数字" class="w-full px-3 py-2 focus:outline-none text-xs sm:text-sm font-extrabold text-amber-950 bg-white">
+            </div>
+            <button type="button" id="btn-search-friend-id" class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs sm:text-sm font-extrabold shadow-sm transition shrink-0">
+              検索
+            </button>
+          </div>
+          <div id="friend-search-result" class="mt-2.5"></div>
+        </div>
+
+        <div class="space-y-2">
+          <div class="flex items-center justify-between gap-2 flex-wrap">
+            <h4 class="text-xs sm:text-sm font-extrabold text-amber-950">お気に入り一覧</h4>
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <span id="ui-favorite-count-label" class="text-[11px] font-bold text-rose-600 mr-1">お気に入り: 0人</span>
+              <button type="button" data-friend-sort="fav_first" class="px-2 py-1 rounded-lg text-[11px] font-extrabold bg-rose-500 text-white shadow-2xs transition">
+                お気に入り順
+              </button>
+              <button type="button" data-friend-sort="dam_desc" class="px-2 py-1 rounded-lg text-[11px] font-extrabold bg-amber-100 hover:bg-amber-200 text-amber-900 transition">
+                ダムLv順
+              </button>
+            </div>
+          </div>
+          <div id="friends-list-container" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-60 overflow-y-auto pr-1"></div>
+        </div>
+      </div>
+
+      <div id="content-guestbook" class="hidden max-h-48 overflow-y-auto space-y-2 pr-1"></div>
+    </section>
+  </div>
+
+  <!-- 名前変更・確認用カスタムモーダル -->
+  <div id="modal-overlay" class="hidden fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-sm w-full p-5 shadow-2xl border-2 border-amber-300">
+      <h3 id="modal-title" class="text-lg font-extrabold text-amber-950 mb-2">タイトル</h3>
+      <p id="modal-desc" class="text-xs sm:text-sm text-amber-800 mb-3"></p>
+      <input id="modal-input" type="text" maxlength="12" class="hidden w-full px-3 py-2 rounded-xl border-2 border-amber-300 focus:border-amber-500 focus:outline-none font-bold text-amber-950 mb-4" placeholder="新しい名前（12文字まで）">
+      <div class="flex justify-end gap-2">
+        <button id="modal-cancel" class="px-4 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs sm:text-sm font-bold">
+          キャンセル
+        </button>
+        <button id="modal-confirm" class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs sm:text-sm font-extrabold shadow">
+          決定する
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ゲームルール説明書モーダル -->
+  <div id="rules-modal-overlay" class="hidden fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full max-h-[85vh] flex flex-col shadow-2xl border-2 border-amber-300 overflow-hidden">
+      <div class="bg-gradient-to-r from-amber-100 to-orange-100 px-5 py-3.5 border-b border-amber-200 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <svg class="w-6 h-6"><use href="#ico-beaver"/></svg>
+          <h3 class="text-base sm:text-lg font-extrabold text-amber-950">もくもく川辺の遊び方ガイド</h3>
+        </div>
+        <button id="rules-modal-close-x" class="w-8 h-8 rounded-full bg-white/80 hover:bg-white text-amber-900 font-extrabold flex items-center justify-center shadow-xs transition">
+          ✕
+        </button>
+      </div>
+
+      <div class="p-5 overflow-y-auto space-y-4 text-xs sm:text-sm text-amber-950 leading-relaxed">
+        <div class="bg-amber-50 rounded-2xl p-3.5 border border-amber-200">
+          <h4 class="font-extrabold text-amber-900 mb-1 flex items-center gap-1.5">
+            <svg class="w-4 h-4"><use href="#ico-sparkle"/></svg> 1. ゲームの目的
+          </h4>
+          <p class="text-amber-800">
+            川辺でビーバーをお世話しながら<strong>流木</strong>を集め、立派な<strong>ダム</strong>を作りましょう。ダムのレベルが上がると、ビーバーも「赤ちゃん → 子ども → おとな → 親方ビーバー」へと成長していきます。
+          </p>
+        </div>
+
+        <div class="space-y-2">
+          <h4 class="font-extrabold text-amber-900 flex items-center gap-1.5">
+            <svg class="w-4 h-4"><use href="#ico-wood"/></svg> 2. 基本のお世話と進め方
+          </h4>
+          <ul class="space-y-1.5 text-amber-800 pl-1">
+            <li>・<strong>エサをあげる（りんご／若枝）</strong>：100から徐々に減っていく<strong>まんぷく度</strong>を回復し、ごきげんを上げます。若枝は無料で何度でもあげられます。</li>
+            <li>・<strong>なでなでする</strong>：ボタン操作のほか、川辺のビーバーを直接タップしても喜ばせられます。ごきげんが100（MAX）のときは、お世話回数を消費せずになでなでできます。水面をタップすると、そこへ泳いで移動します。</li>
+            <li>・<strong>ごきげんボーナス</strong>：ごきげんが高いほど<strong>流木2本獲得率</strong>や<strong>ダム建築の進捗効率</strong>、お留守番中の自動建築量がアップします。</li>
+            <li>・<strong>お世話回数の制限と回復</strong>：育成アクションは1回ごとに回数を消費し、<strong>3分ごとに1回（初期上限10回・ダムLvアップごとに上限+4回＆MAX全回復）</strong>自動回復します。</li>
+            <li>・<strong>流木を集める</strong>：少しまんぷく度が減りますが、ダムの材料になる<strong>流木</strong>と、買い物に使える<strong>ツヤツヤのどんぐり</strong>が手に入ります。</li>
+            <li>・<strong>ダムを建築する</strong>：流木を2本使って建築を進めます。建築度が100%になるとダムがレベルアップし、お祝いにツヤツヤのどんぐり+15をもらえます。</li>
+          </ul>
+        </div>
+
+        <div class="bg-amber-50 rounded-2xl p-3.5 border border-amber-200">
+          <h4 class="font-extrabold text-amber-950 mb-1.5 flex items-center gap-1.5">
+            <svg class="w-4 h-4"><use href="#ico-dam"/></svg> 3. レベルアップ＆ダム建築の最適ローテーション
+          </h4>
+          <ol class="space-y-1.5 text-amber-900 list-decimal list-inside text-xs sm:text-[13px]">
+            <li><strong>まんぷく度とごきげんの土台づくり</strong>：まんぷく度が50を切る前に<strong>若枝</strong>（無料）や<strong>りんご</strong>を与え、<strong>なでなで</strong>でごきげんを高く保ちます。</li>
+            <li><strong>流木＆ツヤツヤのどんぐりの確保</strong>：まんぷく度に余裕があるうちに<strong>流木を集める</strong>を繰り返し、流木とツヤツヤのどんぐりを貯めます。</li>
+            <li><strong>ダム建築ラッシュ</strong>：流木が貯まったら<strong>ダムを建築する</strong>で建築度100%を目指し、レベルアップ報酬（ツヤツヤのどんぐり+15）を獲得します。</li>
+            <li><strong>報酬の循環＆おでかけ活用</strong>：得たツヤツヤのどんぐりでりんごを補充し、よその川辺へおでかけして流木をおすそわけすると、さらに効率よくレベルアップできます。</li>
+          </ol>
+        </div>
+
+        <div class="bg-emerald-50 rounded-2xl p-3.5 border border-emerald-200">
+          <h4 class="font-extrabold text-emerald-900 mb-1 flex items-center gap-1.5">
+            <svg class="w-4 h-4"><use href="#ico-beaver"/></svg> 4. 時間経過とお留守番
+          </h4>
+          <p class="text-emerald-800">
+            ゲームを閉じている間も時間が進み、まんぷく度が少しずつ減っていきます。<strong>まんぷく度が50以上</strong>なら、お留守番中も自分で少しずつダムの建築を進めてくれます。
+          </p>
+        </div>
+
+        <div class="bg-indigo-50 rounded-2xl p-3.5 border border-indigo-200">
+          <h4 class="font-extrabold text-indigo-900 mb-1 flex items-center gap-1.5">
+            <svg class="w-4 h-4"><use href="#ico-canoe"/></svg> 5. よその川辺へおでかけ
+          </h4>
+          <p class="text-indigo-800">
+            下の「よその川辺」タブから他の飼い主の川辺へ遊びに行けます。よそのビーバーをなでたり流木をおすそわけしたりすると、お礼にツヤツヤのどんぐりをもらえます。
+          </p>
+        </div>
+      </div>
+
+      <div class="px-5 py-3 bg-amber-50/70 border-t border-amber-200 flex justify-end">
+        <button id="rules-modal-close-btn" class="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs sm:text-sm font-extrabold shadow transition">
+          とじる
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 画面下部トースト通知 -->
+  <div id="toast-container" class="fixed bottom-5 inset-x-3 sm:inset-x-6 z-50 pointer-events-none flex flex-col items-center gap-2"></div>
+
+  <script>
+    /**
+     * ============================================================================
+     * 1. サウンドエンジン (Web Audio API による優しいシンセ効果音)
+     * ============================================================================
+     */
+    class SoundEngine {
+      constructor() {
+        this.ctx = null;
+        this.muted = false;
+      }
+
+      init() {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) this.ctx = new AudioCtx();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+
+      toggleMute() {
+        this.muted = !this.muted;
+        return this.muted;
+      }
+
+      playPop(freq = 360) {
+        if (this.muted) return;
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, now);
+        osc.frequency.exponentialRampToValueAtTime(freq * 1.8, now + 0.12);
+
+        gain.gain.setValueAtTime(0.18, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.14);
+      }
+
+      // 花火の打ち上げ＆炸裂音
+      playFireworkBurst() {
+        if (this.muted) return;
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(160, now);
+        osc.frequency.exponentialRampToValueAtTime(520, now + 0.14);
+        gain.gain.setValueAtTime(0.11, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.17);
+
+        [0.04, 0.11, 0.19].forEach((offset, idx) => {
+          const t = now + offset;
+          const sparkle = this.ctx.createOscillator();
+          const sGain = this.ctx.createGain();
+          sparkle.type = 'triangle';
+          sparkle.frequency.setValueAtTime(880 + idx * 320 + Math.random() * 180, t);
+          sparkle.frequency.exponentialRampToValueAtTime(420, t + 0.14);
+          sGain.gain.setValueAtTime(0.06, t);
+          sGain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+          sparkle.connect(sGain);
+          sGain.connect(this.ctx.destination);
+          sparkle.start(t);
+          sparkle.stop(t + 0.16);
+        });
+      }
+
+      playCrunch() {
+        if (this.muted) return;
+        this.init();
+        if (!this.ctx) return;
+        [0, 0.09, 0.18].forEach((offset, idx) => {
+          const now = this.ctx.currentTime + offset;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(220 + idx * 45, now);
+          osc.frequency.exponentialRampToValueAtTime(110, now + 0.06);
+
+          gain.gain.setValueAtTime(0.15, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.075);
+        });
+      }
+
+      playChime() {
+        if (this.muted) return;
+        this.init();
+        if (!this.ctx) return;
+        const notes = [523.25, 659.25, 783.99, 1046.5];
+        notes.forEach((freq, i) => {
+          const now = this.ctx.currentTime + i * 0.07;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, now);
+
+          gain.gain.setValueAtTime(0.14, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.26);
+        });
+      }
+    }
+
+    /**
+     * ============================================================================
+     * 2. データ永続化アダプター層 (StorageAdapter)
+     * ============================================================================
+     */
+    class StorageAdapter {
+      constructor(storageKey = 'beaver_ranch_save_v1') {
+        this.storageKey = storageKey;
+      }
+
+      getDefaultData() {
+        return {
+          registered: false,
+          user: {
+            uid: 'local_player_001',
+            accountId: this.generateAccountId(),
+            ownerName: 'あなた',
+            wood: 6,
+            coins: 35,
+            favoriteIds: ['neighbor_1'],
+            lastUpdatedAt: Date.now()
+          },
+          gameClock: {
+            hour: 12,
+            lastTickAt: Date.now()
+          },
+          beaver: {
+            name: 'ぽんた',
+            hunger: 20,      // 内部は空腹減り度（0=満腹〜100=ペコペコ）、UIでは満腹度（100 - hunger）として表示
+            mood: 85,
+            damLevel: 1,
+            damProgress: 20,
+            totalFed: 0,
+            color: '#9a5b25',
+            bodyStyle: {
+              headSize: 'medium',
+              waistSize: 'medium',
+              tailLength: 'medium',
+              tailSize: 'medium'
+            }
+          },
+          stamina: {
+            current: 10,
+            max: 10,
+            lastRegenAt: Date.now()
+          },
+          activityLogs: [
+            {
+              id: 'log_init',
+              icon: '#ico-beaver',
+              text: 'もくもく川辺での暮らしが始まりました！',
+              timestamp: Date.now()
+            }
+          ],
+          guestbook: [
+            {
+              id: 'gb_1',
+              visitorName: 'もりのみどり',
+              beaverName: 'ちゃちゃ丸',
+              action: 'gift_wood',
+              message: '立派なダムだね！流木を1本置いていくよ！',
+              timestamp: Date.now() - 1000 * 60 * 45
+            },
+            {
+              id: 'gb_2',
+              visitorName: 'かわうそ太郎',
+              beaverName: 'ココア',
+              action: 'pet',
+              message: 'ぽんたちゃんをなでなでしたよ♪',
+              timestamp: Date.now() - 1000 * 60 * 180
+            }
+          ]
+        };
+      }
+
+      generateAccountId() {
+        const num = Math.floor(100000 + Math.random() * 900000);
+        return `BV-${num}`;
+      }
+
+      async loadGameData() {
+        try {
+          const raw = localStorage.getItem(this.storageKey);
+          if (!raw) return this.getDefaultData();
+          const parsed = JSON.parse(raw);
+          const def = this.getDefaultData();
+          return {
+            ...def,
+            registered: Boolean(parsed.registered),
+            user: {
+              ...def.user,
+              ...(parsed.user || {})
+            },
+            gameClock: {
+              ...def.gameClock,
+              ...(parsed.gameClock || {})
+            },
+            beaver: {
+              ...def.beaver,
+              ...(parsed.beaver || {}),
+              bodyStyle: {
+                ...def.beaver.bodyStyle,
+                ...((parsed.beaver && parsed.beaver.bodyStyle) || {})
+              }
+            },
+            stamina: {
+              ...def.stamina,
+              ...(parsed.stamina || {}),
+              max: 10 + (Math.max(1, Number((parsed.beaver && parsed.beaver.damLevel) || def.beaver.damLevel)) - 1) * 4
+            },
+            activityLogs: Array.isArray(parsed.activityLogs) ? parsed.activityLogs : def.activityLogs
+          };
+        } catch (e) {
+          console.error('セーブデータの読み込みに失敗:', e);
+          return this.getDefaultData();
+        }
+      }
+
+      async saveGameData(data) {
+        try {
+          data.user.lastUpdatedAt = Date.now();
+          localStorage.setItem(this.storageKey, JSON.stringify(data));
+          return true;
+        } catch (e) {
+          console.error('セーブデータの保存に失敗:', e);
+          return false;
+        }
+      }
+
+      async resetGameData() {
+        localStorage.removeItem(this.storageKey);
+        return this.getDefaultData();
+      }
+
+      async fetchNeighbors() {
+        return [
+          {
+            uid: 'neighbor_1',
+            accountId: 'BV-204819',
+            ownerName: 'もりのみどり',
+            beaverName: 'ちゃちゃ丸',
+            damLevel: 4,
+            damProgress: 60,
+            hunger: 15,
+            mood: 95,
+            color: '#7c4318',
+            comment: 'ダム増築中！気軽に遊びに来てね〜',
+            visitedToday: false
+          },
+          {
+            uid: 'neighbor_2',
+            accountId: 'BV-319042',
+            ownerName: 'かわうそ太郎',
+            beaverName: 'ココア',
+            damLevel: 2,
+            damProgress: 40,
+            hunger: 25,
+            mood: 88,
+            color: '#5c3317',
+            comment: 'りんごが大好きな甘えん坊です♪',
+            visitedToday: false
+          },
+          {
+            uid: 'neighbor_3',
+            accountId: 'BV-482710',
+            ownerName: 'どんぐり姫',
+            beaverName: 'きなこ',
+            damLevel: 6,
+            damProgress: 85,
+            hunger: 10,
+            mood: 98,
+            color: '#c28246',
+            comment: '親方ビーバー目指して毎日コツコツ！',
+            visitedToday: false
+          },
+          {
+            uid: 'neighbor_4',
+            accountId: 'BV-591024',
+            ownerName: 'せせらぎ工房',
+            beaverName: 'まるお',
+            damLevel: 3,
+            damProgress: 15,
+            hunger: 35,
+            mood: 70,
+            color: '#854d27',
+            comment: '流木いつも大歓迎です！',
+            visitedToday: false
+          }
+        ];
+      }
+
+      async sendVisitInteraction(neighborUid, actionType, senderName) {
+        await new Promise((r) => setTimeout(r, 120));
+        return { success: true, neighborUid, actionType, senderName };
+      }
+    }
+
+    /**
+     * ============================================================================
+     * 3. メインゲームコントローラー & Canvasアニメーションエンジン
+     * ============================================================================
+     */
+    class BeaverGame {
+      constructor() {
+        this.storage = new StorageAdapter();
+        this.sound = new SoundEngine();
+
+        this.state = null;
+        this.neighbors = [];
+        this.visitingTarget = null;
+        this.pendingStartAccountId = null;
+        this.searchedNeighbor = null;
+        this.friendSortMode = 'fav_first';
+        this.colorChoices = [
+          { id: 'fox_brown', name: 'きつねブラウン', hex: '#9a5b25' },
+          { id: 'cocoa_dark', name: 'ココアダーク', hex: '#5c3317' },
+          { id: 'caramel_latte', name: 'キャラメルラテ', hex: '#c28246' },
+          { id: 'chestnut_red', name: 'くりレッド', hex: '#a84325' },
+          { id: 'honey_gold', name: 'はちみつゴールド', hex: '#d99b38' },
+          { id: 'mocha_taupe', name: 'モカトープ', hex: '#7c6252' },
+          { id: 'silver_ash', name: 'シルバーアッシュ', hex: '#7b8794' },
+          { id: 'berry_rose', name: 'ベリーローズ', hex: '#c45b78' },
+          { id: 'matcha_olive', name: 'まっちゃオリーブ', hex: '#688249' },
+          { id: 'sky_slate', name: 'そらスレート', hex: '#5b7fa6' }
+        ];
+        this.bodyOptionChoices = {
+          headSize: [
+            { id: 'small', label: 'ちび頭', scale: 0.66 },
+            { id: 'medium', label: 'ふつう頭', scale: 0.76 },
+            { id: 'large', label: 'おおきめ頭', scale: 0.88 }
+          ],
+          waistSize: [
+            { id: 'small', label: 'すっきり腰', waistScaleX: 0.9, waistScaleY: 0.9 },
+            { id: 'medium', label: 'ぽってり腰', waistScaleX: 1.0, waistScaleY: 1.0 },
+            { id: 'large', label: 'むっちり腰', waistScaleX: 1.13, waistScaleY: 1.12 }
+          ],
+          tailLength: [
+            { id: 'short', label: 'みじかめ', lengthScale: 0.82 },
+            { id: 'medium', label: 'ふつう', lengthScale: 1.0 },
+            { id: 'long', label: 'ながめ', lengthScale: 1.22 }
+          ],
+          tailSize: [
+            { id: 'small', label: 'ほそめ', thicknessScale: 0.82 },
+            { id: 'medium', label: 'ふつう', thicknessScale: 1.0 },
+            { id: 'large', label: 'ふっくら', thicknessScale: 1.22 }
+          ]
+        };
+        this.pendingBeaverCustom = {
+          color: '#9a5b25',
+          headSize: 'medium',
+          waistSize: 'medium',
+          tailLength: 'medium',
+          tailSize: 'medium'
+        };
+
+        this.canvas = document.getElementById('game-canvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.width = 0;
+        this.height = 0;
+
+        this.time = 0;
+        this.beaverAnim = {
+          xRatio: 0.45,
+          targetXRatio: 0.45,
+          yOffset: 0,
+          targetYOffset: 0,
+          facing: 1,
+          action: 'idle',
+          actionTimer: 0,
+          sleepHasClosedEyes: false,
+          sleepStartedAtMs: 0,
+          sleepEndAtMs: 0,
+          bobOffset: 0,
+          blinkTimer: 0,
+          nextBlinkIn: 140,
+          frontLookTimer: 120,
+          frontLookCooldown: 180,
+          refuseDuration: 120
+        };
+
+        this.particles = [];
+        this.ripples = [];
+        this.fireworks = [];
+        this.fireworkSparks = [];
+        this.fireworkEndTime = 0;
+        this.nextFireworkLaunchAt = 0;
+        this.STAMINA_REGEN_MS = 3 * 60 * 1000; // 3分ごとに1回回復（最大10回）
+        this.GAME_HOUR_MS = 2 * 60 * 1000; // 実時間2分でゲーム内1時間進行
+      }
+
+      async init() {
+        this.state = await this.storage.loadGameData();
+        this.neighbors = await this.storage.fetchNeighbors();
+        this.pendingStartAccountId = this.state.user.accountId;
+        const savedBody = this.state.beaver.bodyStyle || {};
+        this.pendingBeaverCustom = {
+          color: this.state.beaver.color || '#9a5b25',
+          headSize: savedBody.headSize || 'medium',
+          waistSize: savedBody.waistSize || 'medium',
+          tailLength: savedBody.tailLength || 'medium',
+          tailSize: savedBody.tailSize || 'medium'
+        };
+
+        this.syncMaxStamina(false);
+        this.updateStaminaRegen(Date.now(), false);
+        this.advanceGameClockByRealElapsed(Date.now() - this.state.user.lastUpdatedAt, false);
+        this.applyElapsedTime(Date.now() - this.state.user.lastUpdatedAt);
+        await this.storage.saveGameData(this.state);
+
+        this.setupCanvas();
+        this.bindEvents();
+        this.syncStartScreenState();
+        this.updateUI();
+        this.renderActivityLogs();
+        this.renderNeighbors();
+        this.renderFriendsTab();
+        this.renderGuestbook();
+
+        setInterval(() => {
+          const recovered = this.updateStaminaRegen(Date.now(), true);
+          const clockChanged = this.advanceGameClockByRealElapsed(1000, true);
+          if (recovered || clockChanged) {
+            this.storage.saveGameData(this.state);
+          }
+          if (clockChanged) {
+            this.updateTimeOfDayUI();
+          }
+          this.updateStaminaUI();
+        }, 1000);
+
+        requestAnimationFrame(() => this.loop());
+      }
+
+      // ごきげん度に応じたボーナス倍率・説明取得
+      getMoodBonus(mood = this.state.beaver.mood) {
+        if (mood >= 80) {
+          return {
+            doubleWoodChance: 0.65,
+            damProgressBonus: 6,
+            idleDamBonus: 2,
+            coinBonus: 1,
+            label: '★ ごきげん絶好調：流木2本率UP & 建築効率+6%'
+          };
+        }
+        if (mood >= 50) {
+          return {
+            doubleWoodChance: 0.4,
+            damProgressBonus: 3,
+            idleDamBonus: 1,
+            coinBonus: 0,
+            label: '♪ ごきげん良好：流木2本率少しUP & 建築効率+3%'
+          };
+        }
+        if (mood >= 25) {
+          return {
+            doubleWoodChance: 0.25,
+            damProgressBonus: 0,
+            idleDamBonus: 0,
+            coinBonus: 0,
+            label: '・ ごきげんふつう：標準ペースで活動中'
+          };
+        }
+        return {
+          doubleWoodChance: 0.1,
+          damProgressBonus: -4,
+          idleDamBonus: 0,
+          coinBonus: 0,
+          label: '！ ごきげん低下中：なでなでやエサで元気を出そう'
+        };
+      }
+
+      // 活動・変化ログを追記（最大40件保持）
+      addActivityLog(text, icon = '#ico-sparkle', customTimestamp = Date.now()) {
+        if (!Array.isArray(this.state.activityLogs)) {
+          this.state.activityLogs = [];
+        }
+        this.state.activityLogs.unshift({
+          id: `log_${customTimestamp}_${Math.random().toString(36).slice(2, 6)}`,
+          icon,
+          text,
+          timestamp: customTimestamp
+        });
+        if (this.state.activityLogs.length > 40) {
+          this.state.activityLogs.length = 40;
+        }
+        this.renderActivityLogs();
+      }
+
+      // 活動・変化ログ窓の描画
+      renderActivityLogs() {
+        const container = document.getElementById('activity-log-window');
+        if (!container) return;
+        const logs = Array.isArray(this.state && this.state.activityLogs) ? this.state.activityLogs : [];
+        if (logs.length === 0) {
+          container.innerHTML = '<p class="text-[11px] font-bold text-amber-700/80 py-1">まだ活動の記録はありません。</p>';
+          return;
+        }
+
+        container.innerHTML = '';
+        logs.forEach((entry) => {
+          const d = new Date(entry.timestamp || Date.now());
+          const hh = String(d.getHours()).padStart(2, '0');
+          const mm = String(d.getMinutes()).padStart(2, '0');
+          const iconId = entry.icon || '#ico-sparkle';
+
+          const row = document.createElement('div');
+          row.className = 'flex items-start gap-2 bg-white/90 rounded-lg px-2.5 py-1.5 border border-amber-200/80 shadow-2xs';
+          row.innerHTML = `
+            <svg class="w-4 h-4 shrink-0 mt-0.5"><use href="${iconId}"/></svg>
+            <p class="flex-1 text-amber-950 font-bold leading-snug break-words">${entry.text}</p>
+            <span class="text-[10px] font-extrabold text-amber-600 shrink-0 mt-0.5">${hh}:${mm}</span>
+          `;
+          container.appendChild(row);
+        });
+      }
+
+      // ダムレベルに応じたお世話回数上限（Lv.1は10回、レベルが1上がるごとに+4回）
+      getMaxStamina(level = this.state ? this.state.beaver.damLevel : 1) {
+        const safeLv = Math.max(1, Math.floor(Number(level) || 1));
+        return 10 + (safeLv - 1) * 4;
+      }
+
+      // お世話回数上限を現在のダムレベルに同期（レベルアップ時はMAXまで全回復）
+      syncMaxStamina(refillToMax = true) {
+        if (!this.state || !this.state.stamina) return 0;
+        const st = this.state.stamina;
+        const newMax = this.getMaxStamina(this.state.beaver.damLevel);
+        const prevMax = typeof st.max === 'number' ? st.max : 10;
+        const diff = newMax - prevMax;
+        st.max = newMax;
+        if (refillToMax) {
+          st.current = newMax;
+          st.lastRegenAt = Date.now();
+        } else if (st.current > newMax) {
+          st.current = newMax;
+        }
+        return diff;
+      }
+
+      getBodyMetrics(bodyStyle = this.state && this.state.beaver && this.state.beaver.bodyStyle) {
+        const safe = bodyStyle || {};
+        const headOpt = this.bodyOptionChoices.headSize.find((o) => o.id === safe.headSize) || this.bodyOptionChoices.headSize[1];
+        const waistOpt = this.bodyOptionChoices.waistSize.find((o) => o.id === safe.waistSize) || this.bodyOptionChoices.waistSize[1];
+        const tailLenOpt = this.bodyOptionChoices.tailLength.find((o) => o.id === safe.tailLength) || this.bodyOptionChoices.tailLength[1];
+        const tailSizeOpt = this.bodyOptionChoices.tailSize.find((o) => o.id === safe.tailSize) || this.bodyOptionChoices.tailSize[1];
+        return {
+          headScale: headOpt.scale,
+          waistScaleX: waistOpt.waistScaleX,
+          waistScaleY: waistOpt.waistScaleY,
+          tailLengthScale: tailLenOpt.lengthScale,
+          tailThicknessScale: tailSizeOpt.thicknessScale
+        };
+      }
+
+      renderStartCustomizationOptions() {
+        const paletteEl = document.getElementById('start-color-palette');
+        const colorNameEl = document.getElementById('start-selected-color-name');
+        const shortColorLabels = {
+          fox_brown: 'きつね',
+          cocoa_dark: 'ココア',
+          caramel_latte: 'キャラメル',
+          chestnut_red: 'くり',
+          honey_gold: 'はちみつ',
+          mocha_taupe: 'モカ',
+          silver_ash: 'シルバー',
+          berry_rose: 'ベリー',
+          matcha_olive: 'まっちゃ',
+          sky_slate: 'そら'
+        };
+        if (paletteEl) {
+          paletteEl.innerHTML = '';
+          this.colorChoices.forEach((c) => {
+            const selected = this.pendingBeaverCustom.color.toLowerCase() === c.hex.toLowerCase();
+            if (selected && colorNameEl) {
+              colorNameEl.textContent = c.name;
+            }
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.title = `${c.name}（${c.hex}）`;
+            btn.className = `flex flex-col items-center justify-center gap-1 px-1 py-1.5 rounded-xl border text-[10px] font-extrabold leading-tight transition ${
+              selected
+                ? 'bg-amber-200 border-amber-700 text-amber-950 ring-2 ring-amber-500'
+                : 'bg-white hover:bg-amber-100 border-amber-200 text-amber-900'
+            }`;
+            const labelText = shortColorLabels[c.id] || c.name;
+            btn.innerHTML = `
+              <span class="w-4 h-4 rounded-full border border-black/20 shrink-0" style="background-color:${c.hex};"></span>
+              <span class="w-full text-center whitespace-nowrap tracking-tighter">${labelText}</span>
+            `;
+            btn.addEventListener('click', () => {
+              this.pendingBeaverCustom.color = c.hex;
+              this.state.beaver.color = c.hex;
+              this.sound.playPop(430);
+              this.renderStartCustomizationOptions();
+            });
+            paletteEl.appendChild(btn);
+          });
+        }
+
+        const renderGroup = (containerId, key) => {
+          const el = document.getElementById(containerId);
+          if (!el) return;
+          el.innerHTML = '';
+          const opts = this.bodyOptionChoices[key] || [];
+          opts.forEach((opt) => {
+            const active = this.pendingBeaverCustom[key] === opt.id;
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = `py-1.5 px-1 rounded-xl border text-[10px] sm:text-[11px] font-extrabold leading-tight whitespace-nowrap tracking-tighter transition ${
+              active
+                ? 'bg-amber-500 text-white border-amber-700 shadow-2xs'
+                : 'bg-white hover:bg-amber-100 text-amber-900 border-amber-200'
+            }`;
+            btn.textContent = opt.label;
+            btn.addEventListener('click', () => {
+              this.pendingBeaverCustom[key] = opt.id;
+              this.state.beaver.bodyStyle = {
+                ...(this.state.beaver.bodyStyle || {}),
+                [key]: opt.id
+              };
+              this.sound.playPop(410);
+              renderGroup(containerId, key);
+            });
+            el.appendChild(btn);
+          });
+        };
+
+        renderGroup('start-head-options', 'headSize');
+        renderGroup('start-waist-options', 'waistSize');
+        renderGroup('start-tail-length-options', 'tailLength');
+        renderGroup('start-tail-size-options', 'tailSize');
+      }
+
+      syncStartScreenState() {
+        const overlay = document.getElementById('start-screen-overlay');
+        if (!overlay) return;
+        const previewIdEl = document.getElementById('start-preview-id');
+        if (previewIdEl) {
+          previewIdEl.textContent = this.pendingStartAccountId || this.state.user.accountId;
+        }
+        const ownerInput = document.getElementById('input-start-owner');
+        const beaverInput = document.getElementById('input-start-beaver');
+        if (ownerInput && this.state.user.ownerName && this.state.user.ownerName !== 'あなた') {
+          ownerInput.value = this.state.user.ownerName;
+        }
+        if (beaverInput && this.state.beaver.name) {
+          beaverInput.value = this.state.beaver.name;
+        }
+        this.renderStartCustomizationOptions();
+        const isRegistered = Boolean(this.state.registered);
+        overlay.classList.toggle('hidden', isRegistered);
+        overlay.classList.toggle('flex', !isRegistered);
+      }
+
+      copyToClipboard(text, successMessage) {
+        const fallbackCopy = () => {
+          const ta = document.createElement('textarea');
+          ta.value = text;
+          ta.style.position = 'fixed';
+          ta.style.opacity = '0';
+          document.body.appendChild(ta);
+          ta.select();
+          try {
+            document.execCommand('copy');
+            this.showToast(successMessage);
+          } catch (_) {
+            this.showToast(`ID: ${text}`);
+          }
+          document.body.removeChild(ta);
+        };
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(() => this.showToast(successMessage)).catch(fallbackCopy);
+        } else {
+          fallbackCopy();
+        }
+      }
+
+      applyElapsedTime(elapsedMs) {
+        const hours = elapsedMs / (1000 * 60 * 60);
+        if (hours < 0.05) return;
+
+        const prevFullness = 100 - this.state.beaver.hunger;
+        const prevMood = this.state.beaver.mood;
+        const prevLv = this.state.beaver.damLevel;
+        const prevProg = this.state.beaver.damProgress;
+
+        const hungerIncrease = Math.floor(hours * 8);
+        const moodLoss = Math.floor(hours * 4);
+
+        this.state.beaver.hunger = Math.min(90, this.state.beaver.hunger + hungerIncrease);
+        this.state.beaver.mood = Math.max(15, this.state.beaver.mood - moodLoss);
+
+        const newFullness = 100 - this.state.beaver.hunger;
+        const moodBonus = this.getMoodBonus(prevMood);
+        let autoProgress = 0;
+
+        if (this.state.beaver.hunger <= 50) {
+          autoProgress = Math.min(40, Math.floor(hours * (5 + moodBonus.idleDamBonus)));
+          if (autoProgress > 0) {
+            this.addDamProgress(autoProgress, false);
+          }
+        }
+
+        const hourLabel = hours >= 1 ? `約${Math.floor(hours)}時間` : `約${Math.max(1, Math.round(hours * 60))}分`;
+        const parts = [`${hourLabel}経過：まんぷく ${prevFullness}→${newFullness}、ごきげん ${prevMood}→${this.state.beaver.mood}`];
+        if (autoProgress > 0) {
+          const nextReq = this.getRequiredDamPoints(this.state.beaver.damLevel);
+          if (this.state.beaver.damLevel > prevLv) {
+            const newMaxStamina = this.getMaxStamina(this.state.beaver.damLevel);
+            this.triggerLevelUpFireworks(5000);
+            parts.push(`お留守番中にダム建築が進み Lv.${prevLv}→Lv.${this.state.beaver.damLevel} にアップ！（お世話回数がMAX(${newMaxStamina}回)に全回復 / 次の必要pt: ${nextReq}）`);
+          } else {
+            parts.push(`お留守番中にダム建築 +${autoProgress}pt（${prevProg}→${this.state.beaver.damProgress}/${nextReq}pt）`);
+          }
+        }
+        this.addActivityLog(parts.join(' / '), autoProgress > 0 ? '#ico-dam' : '#ico-beaver');
+      }
+
+      // レベルごとの必要レベルポイント（Lv.1は100pt、以降レベルが1上がるごとに1.5倍）
+      getRequiredDamPoints(level = 1) {
+        const safeLv = Math.max(1, Math.floor(Number(level) || 1));
+        return Math.round(100 * Math.pow(1.5, safeLv - 1));
+      }
+
+      // ゲーム内時刻（0〜23時）から時間帯（朝・昼・夕方・夜）を取得（1時間ごとに循環）
+      getTimeOfDayInfo(hour = (this.state && this.state.gameClock && this.state.gameClock.hour) || 12) {
+        const h = ((Math.floor(Number(hour)) % 24) + 24) % 24;
+        const cycleIdx = h % 4; // 1時間ごとに 朝(0) → 昼(1) → 夕方(2) → 夜(3) へ変化
+        if (cycleIdx === 0) {
+          return { period: 'morning', label: '朝', icon: '🌅', skyTop: '#fed7aa', skyBottom: '#e0f2fe', hillBack: '#86efac', hillFront: '#4ade80', waterTop: '#7dd3fc', waterMid: '#0284c7', waterBottom: '#0369a1' };
+        }
+        if (cycleIdx === 1) {
+          return { period: 'day', label: '昼', icon: '☀️', skyTop: '#bae6fd', skyBottom: '#e0f2fe', hillBack: '#a7f3d0', hillFront: '#22c55e', waterTop: '#38bdf8', waterMid: '#0284c7', waterBottom: '#0369a1' };
+        }
+        if (cycleIdx === 2) {
+          return { period: 'evening', label: '夕方', icon: '🌇', skyTop: '#fb923c', skyBottom: '#fde68a', hillBack: '#fdba74', hillFront: '#15803d', waterTop: '#f59e0b', waterMid: '#b45309', waterBottom: '#451a03' };
+        }
+        return { period: 'night', label: '夜', icon: '🌙', skyTop: '#0f172a', skyBottom: '#1e293b', hillBack: '#1e3a3a', hillFront: '#14532d', waterTop: '#1d4ed8', waterMid: '#1e3a8a', waterBottom: '#090d16' };
+      }
+
+      advanceGameHours(hoursCount = 1, notifyToast = false) {
+        if (!this.state || !this.state.gameClock) return;
+        const addH = Math.max(0, Math.floor(Number(hoursCount) || 0));
+        if (addH <= 0) return;
+        const prevInfo = this.getTimeOfDayInfo(this.state.gameClock.hour);
+        this.state.gameClock.hour = (this.state.gameClock.hour + addH) % 24;
+        const nextInfo = this.getTimeOfDayInfo(this.state.gameClock.hour);
+        this.updateTimeOfDayUI();
+
+        const isDayOrMorning = nextInfo.period === 'morning' || nextInfo.period === 'day';
+        if (isDayOrMorning && this.beaverAnim.action === 'idle' && Math.random() < 0.55) {
+          this.startDamNap();
+        } else if (!isDayOrMorning && this.beaverAnim.action === 'sleep') {
+          this.wakeBeaverFromDam(false);
+        }
+
+        if (notifyToast && prevInfo.period !== nextInfo.period) {
+          this.showToast(`${nextInfo.icon} ゲーム内時間が1時間進み「${nextInfo.label}」になりました！`);
+        }
+      }
+
+      advanceGameClockByRealElapsed(elapsedMs, notifyToast = false) {
+        if (!this.state || !this.state.gameClock) return false;
+        const gc = this.state.gameClock;
+        if (typeof gc.hour !== 'number' || Number.isNaN(gc.hour)) gc.hour = 12;
+        if (typeof gc.lastTickAt !== 'number' || Number.isNaN(gc.lastTickAt)) gc.lastTickAt = Date.now();
+        const safeMs = Math.max(0, Number(elapsedMs) || 0);
+        const gainedHours = Math.floor(safeMs / this.GAME_HOUR_MS);
+        if (gainedHours <= 0) return false;
+        this.advanceGameHours(gainedHours, notifyToast);
+        gc.lastTickAt = Date.now();
+        return true;
+      }
+
+      updateTimeOfDayUI() {
+        const badge = document.getElementById('ui-game-time-badge');
+        if (!badge || !this.state || !this.state.gameClock) return;
+        const h = ((Math.floor(Number(this.state.gameClock.hour)) % 24) + 24) % 24;
+        const info = this.getTimeOfDayInfo(h);
+        const hh = String(h).padStart(2, '0');
+        badge.textContent = `${info.icon} ${info.label}（${hh}:00）`;
+        if (info.period === 'night') {
+          badge.className = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-900/90 backdrop-blur text-[11px] font-extrabold text-indigo-100 shadow-sm border border-indigo-400/40';
+        } else if (info.period === 'evening') {
+          badge.className = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-orange-900/85 backdrop-blur text-[11px] font-extrabold text-amber-100 shadow-sm border border-orange-300/40';
+        } else if (info.period === 'morning') {
+          badge.className = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-800/80 backdrop-blur text-[11px] font-extrabold text-amber-50 shadow-sm border border-amber-200/40';
+        } else {
+          badge.className = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-sky-900/80 backdrop-blur text-[11px] font-extrabold text-amber-100 shadow-sm border border-white/25';
+        }
+      }
+
+      handleSearchFriendById(rawQuery) {
+        const digitsOnly = (rawQuery || '').replace(/[^0-9]/g, '').slice(0, 6);
+        const searchInput = document.getElementById('input-friend-search-id');
+        if (searchInput && searchInput.value !== digitsOnly) {
+          searchInput.value = digitsOnly;
+        }
+        const normalized = digitsOnly ? `BV-${digitsOnly}` : '';
+        const resultEl = document.getElementById('friend-search-result');
+        if (!normalized) {
+          this.searchedNeighbor = null;
+          if (resultEl) {
+            resultEl.innerHTML = '<p class="text-xs font-bold text-rose-600">検索したいIDの半角数字（例: 204819）を入力してください。</p>';
+          }
+          return;
+        }
+
+        if (normalized === this.state.user.accountId.toUpperCase()) {
+          this.searchedNeighbor = null;
+          if (resultEl) {
+            resultEl.innerHTML = '<p class="text-xs font-bold text-amber-800">それはあなたのアカウントIDです。ほかのプレイヤーのIDを検索してみてください。</p>';
+          }
+          return;
+        }
+
+        const found = this.neighbors.find((n) => n.accountId.toUpperCase() === normalized);
+        this.searchedNeighbor = found || null;
+        this.renderSearchResult();
+        if (found) {
+          this.sound.playPop(460);
+        }
+      }
+
+      renderSearchResult() {
+        const resultEl = document.getElementById('friend-search-result');
+        if (!resultEl) return;
+
+        const digitsVal = (document.getElementById('input-friend-search-id').value || '').replace(/[^0-9]/g, '');
+        const queryVal = digitsVal ? `BV-${digitsVal}` : '';
+        if (!queryVal) {
+          resultEl.innerHTML = '';
+          return;
+        }
+
+        if (!this.searchedNeighbor) {
+          resultEl.innerHTML = `<p class="text-xs font-bold text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">ID「${queryVal}」のプレイヤーは見つかりませんでした。</p>`;
+          return;
+        }
+
+        const n = this.searchedNeighbor;
+        const isFav = this.state.user.favoriteIds.includes(n.uid);
+        const stage = this.getGrowthStage(n.damLevel);
+
+        resultEl.innerHTML = `
+          <div class="flex flex-wrap items-center justify-between gap-2 p-3 rounded-2xl bg-white border-2 border-amber-300 shadow-xs">
+            <div>
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <span class="text-xs font-extrabold px-2 py-0.5 rounded-md bg-amber-100 text-amber-950 border border-amber-300">${n.accountId}</span>
+                <span class="font-extrabold text-sm text-amber-950">${n.ownerName}</span>
+                <span class="text-xs font-bold text-amber-700">（${n.beaverName} / ダムLv.${n.damLevel}・${stage.label}）</span>
+              </div>
+              <p class="text-[11px] text-stone-600 mt-1">「${n.comment}」</p>
+            </div>
+            <div class="flex items-center gap-1.5 shrink-0">
+              <button type="button" data-search-fav="${n.uid}" class="px-3 py-1.5 rounded-xl text-xs font-extrabold border transition ${
+                isFav
+                  ? 'bg-rose-500 text-white border-rose-600'
+                  : 'bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-300'
+              }">
+                ${isFav ? '★ お気に入り中' : '☆ お気に入り登録'}
+              </button>
+            </div>
+          </div>
+        `;
+
+        const favBtn = resultEl.querySelector(`button[data-search-fav="${n.uid}"]`);
+        if (favBtn) {
+          favBtn.addEventListener('click', () => this.toggleFavorite(n.uid));
+        }
+      }
+
+      async toggleFavorite(uid) {
+        const target = this.neighbors.find((n) => n.uid === uid);
+        if (!target) return;
+
+        const favIdx = this.state.user.favoriteIds.indexOf(uid);
+        if (favIdx >= 0) {
+          this.state.user.favoriteIds.splice(favIdx, 1);
+          this.sound.playPop(340);
+          this.showToast(`${target.ownerName}さんをお気に入りから外しました`);
+        } else {
+          this.state.user.favoriteIds.push(uid);
+          this.sound.playChime();
+          this.showToast(`${target.ownerName}さんをお気に入りに登録しました！`);
+        }
+
+        await this.storage.saveGameData(this.state);
+        this.updateUI();
+        this.renderNeighbors();
+        this.renderFriendsTab();
+        this.renderSearchResult();
+      }
+
+      async handleFeed(type) {
+        if (this.beaverAnim.action === 'sleep') {
+          this.wakeBeaverFromDam(false);
+        }
+        if (this.state.beaver.hunger <= 5) {
+          const refuseFrames = 120;
+          this.beaverAnim.refuseDuration = refuseFrames;
+          this.beaverAnim.frontLookTimer = refuseFrames;
+          this.triggerBeaverAction('refuse', refuseFrames);
+          this.sound.playPop(260);
+          this.showToast(`${this.state.beaver.name}はまんぷくでイヤイヤしている！`);
+          return;
+        }
+
+        if (type === 'apple' && this.state.user.coins < 5) {
+          this.showToast('ツヤツヤのどんぐりが足りません（流木集めで手に入ります）');
+          return;
+        }
+
+        if (!this.consumeStamina()) return;
+
+        const prevFullness = 100 - this.state.beaver.hunger;
+        const prevMood = this.state.beaver.mood;
+
+        if (type === 'apple') {
+          this.state.user.coins -= 5;
+          this.state.beaver.hunger = Math.max(0, this.state.beaver.hunger - 25);
+          this.state.beaver.mood = Math.min(100, this.state.beaver.mood + 10);
+          const newFullness = 100 - this.state.beaver.hunger;
+          this.spawnParticles('apple', 5);
+          this.addActivityLog(`りんごをあげた（ツヤツヤのどんぐり -5）：まんぷく ${prevFullness}→${newFullness}、ごきげん ${prevMood}→${this.state.beaver.mood}`, '#ico-apple');
+          this.showToast('りんごをモグモグ！（ツヤツヤのどんぐり -5 / まんぷく度 +25）');
+        } else {
+          this.state.beaver.hunger = Math.max(0, this.state.beaver.hunger - 12);
+          this.state.beaver.mood = Math.min(100, this.state.beaver.mood + 3);
+          const newFullness = 100 - this.state.beaver.hunger;
+          this.spawnParticles('branch', 4);
+          this.addActivityLog(`若枝をかじった：まんぷく ${prevFullness}→${newFullness}、ごきげん ${prevMood}→${this.state.beaver.mood}`, '#ico-branch');
+          this.showToast('新鮮な若枝をかじった！まんぷく度 +12');
+        }
+
+        this.beaverAnim.frontLookTimer = 0;
+        this.state.beaver.totalFed += 1;
+        this.triggerBeaverAction('eat', 110);
+        this.sound.playCrunch();
+        await this.storage.saveGameData(this.state);
+        this.updateUI();
+      }
+
+      async handlePet() {
+        if (this.beaverAnim.action === 'sleep') {
+          this.wakeBeaverFromDam(false);
+        }
+        const isMaxMood = this.state.beaver.mood >= 100;
+        if (!isMaxMood && !this.consumeStamina()) return;
+
+        const prevMood = this.state.beaver.mood;
+        this.state.beaver.mood = Math.min(100, this.state.beaver.mood + 15);
+        this.triggerBeaverAction('happy', 100);
+        this.beaverAnim.frontLookTimer = 95;
+        this.spawnParticles('heart', 6);
+        this.sound.playPop(480);
+
+        if (isMaxMood) {
+          this.addActivityLog('ごきげんMAXのため、お世話回数を減らさずなでなでした！', '#ico-heart');
+          this.showToast(`${this.state.beaver.name}はごきげんMAX！回数消費なしで嬉しそうにしっぽをパタパタさせた！`);
+        } else {
+          this.addActivityLog(`なでなでした：ごきげん ${prevMood}→${this.state.beaver.mood}`, '#ico-heart');
+          this.showToast(`${this.state.beaver.name}は嬉しそうにしっぽをパタパタさせた！`);
+        }
+
+        await this.storage.saveGameData(this.state);
+        this.updateUI();
+      }
+
+      async handleGatherWood() {
+        if (this.beaverAnim.action === 'sleep') {
+          this.wakeBeaverFromDam(false);
+        }
+        if (this.state.beaver.hunger >= 85) {
+          this.showToast('おなかがペコペコで動けないみたい…エサをあげよう！');
+          return;
+        }
+        if (!this.consumeStamina()) return;
+
+        const moodBonus = this.getMoodBonus();
+        const foundWood = Math.random() < moodBonus.doubleWoodChance ? 2 : 1;
+        const foundCoins = 2 + moodBonus.coinBonus;
+        const prevFullness = 100 - this.state.beaver.hunger;
+
+        this.state.user.wood += foundWood;
+        this.state.user.coins += foundCoins;
+        this.state.beaver.hunger = Math.min(100, this.state.beaver.hunger + 5);
+        const newFullness = 100 - this.state.beaver.hunger;
+
+        this.triggerBeaverAction('swim', 170);
+        this.spawnParticles('wood', foundWood + 2);
+        this.sound.playPop(390);
+        const bonusNote = moodBonus.coinBonus > 0 ? '（ごきげん特典ツヤツヤのどんぐり+1！）' : '';
+        this.addActivityLog(`流木集め：流木+${foundWood}本・ツヤツヤのどんぐり+${foundCoins}個${bonusNote}（まんぷく ${prevFullness}→${newFullness}）`, '#ico-wood');
+        this.showToast(`川辺で流木を ${foundWood}本 と ツヤツヤのどんぐり ${foundCoins}個 見つけた！`);
+        await this.storage.saveGameData(this.state);
+        this.updateUI();
+      }
+
+      async handleBuildDam() {
+        if (this.beaverAnim.action === 'sleep') {
+          this.wakeBeaverFromDam(false);
+        }
+        if (this.state.user.wood < 2) {
+          this.showToast('流木が足りません（2本必要です）');
+          return;
+        }
+        if (this.state.beaver.hunger >= 80) {
+          this.showToast('おなかが空いて力が出ないみたい！先にエサをあげよう');
+          return;
+        }
+        if (!this.consumeStamina()) return;
+
+        const moodBonus = this.getMoodBonus();
+        const gainProgress = Math.max(10, 18 + moodBonus.damProgressBonus);
+        const prevFullness = 100 - this.state.beaver.hunger;
+        const prevMood = this.state.beaver.mood;
+
+        this.state.user.wood -= 2;
+        this.state.beaver.hunger = Math.min(100, this.state.beaver.hunger + 8);
+        this.state.beaver.mood = Math.min(100, this.state.beaver.mood + 8);
+
+        this.beaverAnim.facing = 1;
+        this.beaverAnim.targetXRatio = 0.65;
+        this.triggerBeaverAction('build', 130);
+        this.spawnParticles('sparkle', 7);
+
+        const leveledUp = this.addDamProgress(gainProgress, true);
+        const newFullness = 100 - this.state.beaver.hunger;
+        const bonusStr = moodBonus.damProgressBonus !== 0
+          ? `（ごきげん補正${moodBonus.damProgressBonus > 0 ? '+' : ''}${moodBonus.damProgressBonus}pt）`
+          : '';
+        const nextReq = this.getRequiredDamPoints(this.state.beaver.damLevel);
+
+        if (leveledUp) {
+          const newMaxStamina = this.getMaxStamina(this.state.beaver.damLevel);
+          this.sound.playChime();
+          this.triggerLevelUpFireworks(5000);
+          this.addActivityLog(`ダム建築で Lv.${this.state.beaver.damLevel} にレベルアップ！報酬ツヤツヤのどんぐり+15・お世話回数がMAX(${newMaxStamina}回)に全回復（次の必要pt: ${nextReq} / まんぷく ${prevFullness}→${newFullness}）`, '#ico-dam');
+          this.showToast(`祝！ダムが Lv.${this.state.beaver.damLevel} にパワーアップ！特典でお世話回数がMAX（${newMaxStamina}回）に全回復しました！`);
+        } else {
+          this.sound.playCrunch();
+          this.addActivityLog(`ダム建築 +${gainProgress}pt${bonusStr} → ${this.state.beaver.damProgress}/${nextReq}pt（まんぷく ${prevFullness}→${newFullness}、ごきげん ${prevMood}→${this.state.beaver.mood}）`, '#ico-dam');
+          this.showToast(`トントンカンカン！ダムポイント +${gainProgress}pt（${this.state.beaver.damProgress}/${nextReq}pt）`);
+        }
+
+        await this.storage.saveGameData(this.state);
+        this.updateUI();
+      }
+
+      addDamProgress(amount, grantReward = true) {
+        if (!Number.isFinite(amount) || amount <= 0) return false;
+        this.state.beaver.damProgress += amount;
+        let leveledUp = false;
+        let required = this.getRequiredDamPoints(this.state.beaver.damLevel);
+        while (this.state.beaver.damProgress >= required) {
+          this.state.beaver.damProgress -= required;
+          this.state.beaver.damLevel += 1;
+          leveledUp = true;
+          this.syncMaxStamina(true);
+          if (grantReward) {
+            this.state.user.coins += 15;
+          }
+          required = this.getRequiredDamPoints(this.state.beaver.damLevel);
+        }
+        return leveledUp;
+      }
+
+      visitNeighbor(uid) {
+        const target = this.neighbors.find((n) => n.uid === uid);
+        if (!target) return;
+
+        this.visitingTarget = target;
+        this.beaverAnim.xRatio = 0.45;
+        this.beaverAnim.targetXRatio = 0.45;
+        this.triggerBeaverAction('happy', 100);
+        this.sound.playPop(440);
+        this.updateUI();
+        this.showToast(`${target.ownerName}さんの川辺に遊びに来ました！`);
+      }
+
+      returnHome() {
+        this.visitingTarget = null;
+        this.beaverAnim.xRatio = 0.45;
+        this.beaverAnim.targetXRatio = 0.45;
+        this.sound.playPop(340);
+        this.updateUI();
+        this.showToast('自分の川辺に帰ってきました');
+      }
+
+      async handleVisitPet() {
+        if (!this.visitingTarget) return;
+        if (this.visitingTarget.visitedToday) {
+          this.showToast('今日はもう交流済みです！また明日遊びに来よう');
+          return;
+        }
+
+        this.visitingTarget.visitedToday = true;
+        this.visitingTarget.mood = Math.min(100, this.visitingTarget.mood + 10);
+        this.state.user.coins += 3;
+
+        await this.storage.sendVisitInteraction(this.visitingTarget.uid, 'pet', this.state.user.ownerName);
+        await this.storage.saveGameData(this.state);
+
+        this.triggerBeaverAction('happy', 110);
+        this.spawnParticles('heart', 6);
+        this.sound.playChime();
+        this.updateUI();
+        this.renderNeighbors();
+        this.showToast(`${this.visitingTarget.beaverName}をなでた！お礼にツヤツヤのどんぐり +3`);
+      }
+
+      async handleVisitGift() {
+        if (!this.visitingTarget) return;
+        if (this.state.user.wood < 1) {
+          this.showToast('おすそわけする流木がありません');
+          return;
+        }
+        if (this.visitingTarget.visitedToday) {
+          this.showToast('今日はもう交流済みです！また明日遊びに来よう');
+          return;
+        }
+
+        this.state.user.wood -= 1;
+        this.state.user.coins += 8;
+        this.visitingTarget.visitedToday = true;
+
+        await this.storage.sendVisitInteraction(this.visitingTarget.uid, 'gift_wood', this.state.user.ownerName);
+        await this.storage.saveGameData(this.state);
+
+        this.triggerBeaverAction('happy', 120);
+        this.spawnParticles('wood', 5);
+        this.sound.playChime();
+        this.updateUI();
+        this.renderNeighbors();
+        this.showToast('流木をプレゼントした！お礼にツヤツヤのどんぐり +8');
+      }
+
+      triggerBeaverAction(action, durationFrames) {
+        this.beaverAnim.action = action;
+        this.beaverAnim.actionTimer = durationFrames;
+        if (action !== 'sleep') {
+          this.beaverAnim.sleepHasClosedEyes = false;
+          this.beaverAnim.sleepStartedAtMs = 0;
+          this.beaverAnim.sleepEndAtMs = 0;
+          this.beaverAnim.targetYOffset = 0;
+        }
+      }
+
+      // 朝・昼モード時にダムの上へ移動し、登りきって目を閉じてから最低30秒〜最長3分眠る
+      startDamNap(durationFrames = 480) {
+        const tod = this.getTimeOfDayInfo(this.state && this.state.gameClock ? this.state.gameClock.hour : 12);
+        if (tod.period !== 'morning' && tod.period !== 'day') return false;
+        this.beaverAnim.targetXRatio = 0.76;
+        this.beaverAnim.facing = this.beaverAnim.targetXRatio >= this.beaverAnim.xRatio ? 1 : -1;
+        this.beaverAnim.frontLookTimer = 0;
+        this.beaverAnim.action = 'sleep';
+        this.beaverAnim.actionTimer = durationFrames;
+        this.beaverAnim.sleepHasClosedEyes = false;
+        this.beaverAnim.sleepStartedAtMs = 0;
+        this.beaverAnim.sleepEndAtMs = 0;
+        return true;
+      }
+
+      // ダム上のお昼寝から目覚めて川面へ戻る
+      wakeBeaverFromDam(keepPosition = false) {
+        if (this.beaverAnim.action !== 'sleep') return;
+        this.beaverAnim.action = 'idle';
+        this.beaverAnim.actionTimer = 0;
+        this.beaverAnim.sleepHasClosedEyes = false;
+        this.beaverAnim.sleepStartedAtMs = 0;
+        this.beaverAnim.sleepEndAtMs = 0;
+        this.beaverAnim.targetYOffset = 0;
+        if (!keepPosition) {
+          this.beaverAnim.targetXRatio = 0.45;
+          this.beaverAnim.facing = this.beaverAnim.targetXRatio >= this.beaverAnim.xRatio ? 1 : -1;
+        }
+      }
+
+      spawnParticles(type, count = 5) {
+        const w = this.width || 480;
+        const h = this.height || 300;
+        const bx = w * this.beaverAnim.xRatio;
+        const by = h * 0.56 + 12 + this.beaverAnim.yOffset + this.beaverAnim.bobOffset;
+        for (let i = 0; i < count; i++) {
+          this.particles.push({
+            type,
+            x: bx + (Math.random() - 0.5) * 44,
+            y: by - 14 + (Math.random() - 0.5) * 16,
+            vx: (Math.random() - 0.5) * 1.4,
+            vy: -0.9 - Math.random() * 1.1,
+            rot: (Math.random() - 0.5) * 0.8,
+            life: 48 + Math.floor(Math.random() * 22)
+          });
+        }
+      }
+
+      getGrowthStage(damLevel) {
+        const lv = Math.max(1, Number(damLevel) || 1);
+        if (lv >= 6) {
+          return { label: '親方ビーバー', scale: 1.24, badgeColor: 'bg-amber-600' };
+        }
+        if (lv >= 4) {
+          return { label: 'おとな', scale: 1.12, badgeColor: 'bg-indigo-500' };
+        }
+        if (lv >= 2) {
+          return { label: '子ども', scale: 1.0, badgeColor: 'bg-sky-500' };
+        }
+        return { label: '赤ちゃん', scale: 0.88, badgeColor: 'bg-emerald-500' };
+      }
+
+      updateStaminaRegen(nowMs = Date.now(), notifyOnRecover = false) {
+        if (!this.state || !this.state.stamina) return false;
+        const st = this.state.stamina;
+        const maxStamina = this.getMaxStamina(this.state.beaver.damLevel);
+        st.max = maxStamina;
+        if (typeof st.current !== 'number' || Number.isNaN(st.current)) {
+          st.current = maxStamina;
+        }
+        if (typeof st.lastRegenAt !== 'number' || Number.isNaN(st.lastRegenAt)) {
+          st.lastRegenAt = nowMs;
+        }
+
+        if (st.current >= maxStamina) {
+          st.current = maxStamina;
+          st.lastRegenAt = nowMs;
+          return false;
+        }
+
+        const elapsed = Math.max(0, nowMs - st.lastRegenAt);
+        const gained = Math.floor(elapsed / this.STAMINA_REGEN_MS);
+        if (gained > 0) {
+          const prev = st.current;
+          st.current = Math.min(maxStamina, st.current + gained);
+          st.lastRegenAt = st.current >= maxStamina
+            ? nowMs
+            : st.lastRegenAt + gained * this.STAMINA_REGEN_MS;
+          if (notifyOnRecover && st.current > prev) {
+            this.showToast(`お世話回数が ${st.current - prev}回 回復しました！（${st.current} / ${maxStamina}）`);
+          }
+          return true;
+        }
+        return false;
+      }
+
+      consumeStamina(amount = 1) {
+        if (!this.state || !this.state.stamina) return true;
+        this.updateStaminaRegen(Date.now(), false);
+        const st = this.state.stamina;
+        const cost = Math.max(1, Number(amount) || 1);
+        if (st.current < cost) {
+          this.showToast(`お世話回数が足りません！3分ごとに1回回復します（現在 ${st.current} / ${st.max}）`);
+          this.updateStaminaUI();
+          return false;
+        }
+        const wasFull = st.current >= st.max;
+        st.current = Math.max(0, st.current - cost);
+        if (wasFull) {
+          st.lastRegenAt = Date.now();
+        }
+        this.updateStaminaUI();
+        return true;
+      }
+
+      updateStaminaUI() {
+        const countEl = document.getElementById('ui-stamina-count');
+        const timerEl = document.getElementById('ui-stamina-timer');
+        if (!this.state || !this.state.stamina) return;
+
+        const st = this.state.stamina;
+        const maxStamina = this.getMaxStamina(this.state.beaver.damLevel);
+        st.max = maxStamina;
+        const current = Math.max(0, Math.min(maxStamina, Number(st.current) || 0));
+
+        if (countEl) {
+          countEl.textContent = `${current} / ${maxStamina}`;
+          countEl.className = current > 0
+            ? 'px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-emerald-500 text-white shadow-2xs'
+            : 'px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-rose-500 text-white shadow-2xs';
+        }
+
+        if (timerEl) {
+          if (current >= maxStamina) {
+            timerEl.textContent = `まんたん！（3分ごとに1回回復・上限${maxStamina}回）`;
+          } else {
+            const remMs = Math.max(0, this.STAMINA_REGEN_MS - ((Date.now() - (st.lastRegenAt || Date.now())) % this.STAMINA_REGEN_MS));
+            const totalSec = Math.ceil(remMs / 1000);
+            const mm = String(Math.floor(totalSec / 60)).padStart(2, '0');
+            const ss = String(totalSec % 60).padStart(2, '0');
+            timerEl.textContent = `次の回復まで ${mm}:${ss}（上限${maxStamina}回）`;
+          }
+        }
+
+        const hasStamina = current > 0;
+        const isMaxMood = this.state.beaver.mood >= 100;
+        const feedAppleBtn = document.getElementById('btn-feed-apple');
+        const feedBranchBtn = document.getElementById('btn-feed-branch');
+        const petBtn = document.getElementById('btn-pet');
+        const gatherBtn = document.getElementById('btn-gather');
+        const buildDamBtn = document.getElementById('btn-build-dam');
+
+        if (feedAppleBtn) feedAppleBtn.disabled = !hasStamina || this.state.user.coins < 5;
+        if (feedBranchBtn) feedBranchBtn.disabled = !hasStamina;
+        if (petBtn) petBtn.disabled = !isMaxMood && !hasStamina;
+        if (gatherBtn) gatherBtn.disabled = !hasStamina;
+        if (buildDamBtn) buildDamBtn.disabled = !hasStamina || this.state.user.wood < 2;
+      }
+
+      setupCanvas() {
+        const wrapper = document.getElementById('canvas-wrapper');
+        const resize = () => {
+          if (!wrapper || !this.canvas || !this.ctx) return;
+          const rect = wrapper.getBoundingClientRect();
+          const dpr = Math.min(window.devicePixelRatio || 1, 2);
+          this.width = Math.max(240, rect.width || wrapper.clientWidth || 480);
+          this.height = Math.max(180, rect.height || wrapper.clientHeight || 300);
+          this.canvas.width = Math.floor(this.width * dpr);
+          this.canvas.height = Math.floor(this.height * dpr);
+          this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        };
+        resize();
+        window.addEventListener('resize', resize);
+      }
+
+      bindEvents() {
+        const on = (id, ev, fn) => {
+          const el = document.getElementById(id);
+          if (el) el.addEventListener(ev, fn);
+        };
+
+        on('btn-regenerate-start-id', 'click', () => {
+          this.pendingStartAccountId = this.storage.generateAccountId();
+          this.sound.playPop(420);
+          this.syncStartScreenState();
+        });
+
+        on('btn-copy-start-id', 'click', () => {
+          const idText = this.pendingStartAccountId || this.state.user.accountId;
+          this.copyToClipboard(idText, `アカウントID「${idText}」をコピーしました`);
+        });
+
+        on('btn-copy-my-id', 'click', () => {
+          this.copyToClipboard(this.state.user.accountId, `アカウントID「${this.state.user.accountId}」をコピーしました`);
+        });
+
+        const startForm = document.getElementById('start-register-form');
+        if (startForm) {
+          startForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const ownerVal = (document.getElementById('input-start-owner').value || '').trim();
+            const beaverVal = (document.getElementById('input-start-beaver').value || '').trim();
+            if (!ownerVal || !beaverVal) {
+              this.showToast('飼い主の名前とビーバーの名前をどちらも入力してください');
+              return;
+            }
+            this.state.user.ownerName = ownerVal.slice(0, 12);
+            this.state.user.accountId = this.pendingStartAccountId || this.state.user.accountId;
+            this.state.beaver.name = beaverVal.slice(0, 12);
+            this.state.beaver.color = this.pendingBeaverCustom.color;
+            this.state.beaver.bodyStyle = {
+              headSize: this.pendingBeaverCustom.headSize,
+              waistSize: this.pendingBeaverCustom.waistSize,
+              tailLength: this.pendingBeaverCustom.tailLength,
+              tailSize: this.pendingBeaverCustom.tailSize
+            };
+            this.state.registered = true;
+            this.addActivityLog(`${this.state.user.ownerName}さんと ${this.state.beaver.name}（ID: ${this.state.user.accountId}）が川辺デビューしました！`, '#ico-beaver');
+            this.sound.playChime();
+            await this.storage.saveGameData(this.state);
+            this.syncStartScreenState();
+            this.updateUI();
+            this.showToast(`${this.state.beaver.name}との川辺生活がスタートしました！`);
+          });
+        }
+
+        on('btn-feed-apple', 'click', () => this.handleFeed('apple'));
+        on('btn-feed-branch', 'click', () => this.handleFeed('branch'));
+        on('btn-pet', 'click', () => this.handlePet());
+        on('btn-gather', 'click', () => this.handleGatherWood());
+        on('btn-build-dam', 'click', () => this.handleBuildDam());
+        on('btn-return-home', 'click', () => this.returnHome());
+        on('btn-visit-pet', 'click', () => this.handleVisitPet());
+        on('btn-visit-gift', 'click', () => this.handleVisitGift());
+
+        on('tab-neighbors', 'click', () => this.switchTab('neighbors'));
+        on('tab-friends', 'click', () => this.switchTab('friends'));
+        on('tab-guestbook', 'click', () => this.switchTab('guestbook'));
+
+        on('btn-search-friend-id', 'click', () => {
+          const val = document.getElementById('input-friend-search-id').value;
+          this.handleSearchFriendById(val);
+        });
+
+        const searchInput = document.getElementById('input-friend-search-id');
+        if (searchInput) {
+          searchInput.addEventListener('input', (e) => {
+            const digitsOnly = e.target.value.replace(/[^0-9]/g, '').slice(0, 6);
+            if (e.target.value !== digitsOnly) e.target.value = digitsOnly;
+          });
+          searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              this.handleSearchFriendById(e.target.value);
+            }
+          });
+        }
+
+        document.querySelectorAll('button[data-friend-sort]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            this.setFriendSortMode(btn.getAttribute('data-friend-sort'));
+          });
+        });
+
+        on('btn-sound-toggle', 'click', () => {
+          const muted = this.sound.toggleMute();
+          const useEl = document.querySelector('#ui-sound-icon use');
+          if (useEl) useEl.setAttribute('href', muted ? '#ico-sound-off' : '#ico-sound-on');
+          this.showToast(muted ? '効果音をオフにしました' : '効果音をオンにしました');
+        });
+
+        on('btn-edit-name', 'click', () => {
+          this.openModal({
+            title: 'ビーバーの名前を変更',
+            desc: '新しい名前を入力してください（12文字まで）',
+            showInput: true,
+            defaultValue: this.state.beaver.name,
+            onConfirm: async (newName) => {
+              const trimmed = (newName || '').trim();
+              if (!trimmed) return;
+              const prevName = this.state.beaver.name;
+              this.state.beaver.name = trimmed.slice(0, 12);
+              this.addActivityLog(`ビーバーの名前を「${prevName}」から「${this.state.beaver.name}」に変更しました`, '#ico-edit');
+              await this.storage.saveGameData(this.state);
+              this.updateUI();
+              this.showToast(`名前を「${this.state.beaver.name}」に変えました！`);
+            }
+          });
+        });
+
+        on('btn-reset-save', 'click', () => {
+          this.openModal({
+            title: 'セーブデータの初期化',
+            desc: 'これまでの成長記録やアイテムがすべてリセットされ、スタート登録画面に戻ります。よろしいですか？',
+            showInput: false,
+            onConfirm: async () => {
+              this.state = await this.storage.resetGameData();
+              this.pendingStartAccountId = this.state.user.accountId;
+              this.pendingBeaverCustom = {
+                color: this.state.beaver.color,
+                headSize: this.state.beaver.bodyStyle.headSize,
+                waistSize: this.state.beaver.bodyStyle.waistSize,
+                tailLength: this.state.beaver.bodyStyle.tailLength,
+                tailSize: this.state.beaver.bodyStyle.tailSize
+              };
+              this.visitingTarget = null;
+              this.syncStartScreenState();
+              this.updateUI();
+              this.renderActivityLogs();
+              this.renderNeighbors();
+              this.renderFriendsTab();
+              this.renderGuestbook();
+              this.showToast('データを初期化しました');
+            }
+          });
+        });
+
+        const rulesOverlay = document.getElementById('rules-modal-overlay');
+        const openRules = () => rulesOverlay && rulesOverlay.classList.remove('hidden');
+        const closeRules = () => rulesOverlay && rulesOverlay.classList.add('hidden');
+        on('btn-how-to-play', 'click', openRules);
+        on('rules-modal-close-x', 'click', closeRules);
+        on('rules-modal-close-btn', 'click', closeRules);
+        if (rulesOverlay) {
+          rulesOverlay.addEventListener('click', (e) => {
+            if (e.target === rulesOverlay) closeRules();
+          });
+        }
+
+        on('btn-sim-time', 'click', async () => {
+          const st = this.state.stamina;
+          if (st && st.current < st.max) {
+            st.current = st.max;
+            st.lastRegenAt = Date.now();
+          }
+          this.advanceGameHours(1, false);
+          this.applyElapsedTime(1000 * 60 * 60);
+          await this.storage.saveGameData(this.state);
+          this.updateUI();
+          const info = this.getTimeOfDayInfo(this.state.gameClock.hour);
+          this.sound.playPop(280);
+          this.showToast(`1時間が経過しました（${info.icon} ${info.label}・活動ログに記録されました）`);
+        });
+
+        if (this.canvas) {
+          this.canvas.addEventListener('click', (e) => {
+            const rect = this.canvas.getBoundingClientRect();
+            const px = e.clientX - rect.left;
+            const py = e.clientY - rect.top;
+            const bx = (this.width || rect.width) * this.beaverAnim.xRatio;
+            const by = (this.height || rect.height) * 0.56 + 12 + this.beaverAnim.yOffset + this.beaverAnim.bobOffset;
+            const dist = Math.hypot(px - bx, py - by);
+
+            if (dist < 48) {
+              if (this.beaverAnim.action === 'sleep') {
+                this.wakeBeaverFromDam(true);
+              }
+              this.triggerBeaverAction('happy', 90);
+              this.beaverAnim.frontLookTimer = 90;
+              this.spawnParticles('heart', 5);
+              this.sound.playPop(520);
+            } else {
+              if (this.beaverAnim.action === 'sleep') {
+                this.wakeBeaverFromDam(false);
+              }
+              const ratioX = Math.max(0.22, Math.min(0.72, px / Math.max(1, this.width || rect.width)));
+              this.beaverAnim.targetXRatio = ratioX;
+              this.beaverAnim.facing = ratioX >= this.beaverAnim.xRatio ? 1 : -1;
+              this.beaverAnim.frontLookTimer = 0;
+              this.triggerBeaverAction('swim', 110);
+              this.spawnRipple(px, py);
+              this.sound.playPop(330);
+            }
+          });
+        }
+      }
+
+      spawnRipple(x, y) {
+        this.ripples.push({ x, y, radius: 6, maxRadius: 48, alpha: 0.7 });
+      }
+
+      // レベルアップ時に指定ミリ秒（デフォルト5000ms = 5秒間）花火を打ち上げる
+      triggerLevelUpFireworks(durationMs = 5000) {
+        const now = performance.now();
+        this.fireworkEndTime = Math.max(this.fireworkEndTime, now + durationMs);
+        this.nextFireworkLaunchAt = now;
+        this.launchSingleFirework();
+      }
+
+      launchSingleFirework() {
+        const w = this.width || 400;
+        const h = this.height || 300;
+        const palettes = [
+          ['#f43f5e', '#fb7185', '#fde047'],
+          ['#f59e0b', '#facc15', '#ffffff'],
+          ['#ec4899', '#c084fc', '#fef08a'],
+          ['#38bdf8', '#34d399', '#fef9c3'],
+          ['#fb923c', '#f43f5e', '#a7f3d0']
+        ];
+        const colors = palettes[Math.floor(Math.random() * palettes.length)];
+        const startX = w * (0.16 + Math.random() * 0.68);
+        const startY = h * 0.56;
+        const targetY = h * (0.12 + Math.random() * 0.24);
+
+        this.fireworks.push({
+          x: startX,
+          y: startY,
+          vx: (Math.random() - 0.5) * 1.4,
+          vy: -4.8 - Math.random() * 1.6,
+          targetY,
+          colors,
+          trail: []
+        });
+      }
+
+      burstFirework(fw) {
+        this.sound.playFireworkBurst();
+        const sparkCount = 34;
+        for (let i = 0; i < sparkCount; i++) {
+          const angle = (Math.PI * 2 * i) / sparkCount + (Math.random() - 0.5) * 0.14;
+          const speed = 1.4 + Math.random() * 2.8;
+          const color = fw.colors[i % fw.colors.length];
+          this.fireworkSparks.push({
+            x: fw.x,
+            y: fw.y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            color,
+            size: 2.2 + Math.random() * 1.6,
+            life: 48 + Math.floor(Math.random() * 22),
+            maxLife: 70
+          });
+        }
+        // 中心のきらめきリング
+        for (let j = 0; j < 12; j++) {
+          const angle = (Math.PI * 2 * j) / 12;
+          const speed = 0.8 + Math.random() * 0.6;
+          this.fireworkSparks.push({
+            x: fw.x,
+            y: fw.y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            color: '#ffffff',
+            size: 2.0,
+            life: 36,
+            maxLife: 36
+          });
+        }
+      }
+
+      // UI全体更新（内部の hunger は 0=満腹〜100=空腹 として保持し、UIでは 100 - hunger をまんぷく度として表示）
+      updateUI() {
+        const isVisit = Boolean(this.visitingTarget);
+        const activeBeaver = isVisit
+          ? {
+              name: this.visitingTarget.beaverName,
+              damLevel: this.visitingTarget.damLevel,
+              damProgress: this.visitingTarget.damProgress,
+              hunger: this.visitingTarget.hunger,
+              mood: this.visitingTarget.mood
+            }
+          : this.state.beaver;
+
+        const stage = this.getGrowthStage(activeBeaver.damLevel);
+
+        const setText = (id, value) => {
+          const el = document.getElementById(id);
+          if (el) el.textContent = value;
+          return el;
+        };
+        const setWidth = (id, pct) => {
+          const el = document.getElementById(id);
+          if (el) el.style.width = `${pct}%`;
+        };
+
+        setText('ui-beaver-name', activeBeaver.name);
+        setText('ui-owner-name', isVisit ? this.visitingTarget.ownerName : this.state.user.ownerName);
+        setText('ui-my-account-id', this.state.user.accountId);
+        setText('ui-friends-badge', this.state.user.favoriteIds.length);
+        setText('ui-favorite-count-label', `お気に入り: ${this.state.user.favoriteIds.length}人`);
+
+        const badge = document.getElementById('ui-stage-badge');
+        if (badge) {
+          badge.textContent = stage.label;
+          badge.className = `px-2.5 py-0.5 rounded-full text-xs font-extrabold text-white shadow-sm ${stage.badgeColor}`;
+        }
+
+        setText('ui-dam-level', activeBeaver.damLevel);
+        const reqDamPoints = this.getRequiredDamPoints(activeBeaver.damLevel);
+        setText('ui-dam-progress', `${activeBeaver.damProgress} / ${reqDamPoints}pt`);
+
+        setText('ui-wood-count', this.state.user.wood);
+        setText('ui-coin-count', this.state.user.coins);
+
+        const fullness = Math.max(0, Math.min(100, 100 - activeBeaver.hunger));
+        setText('ui-hunger-text', `${fullness} / 100`);
+        setWidth('ui-hunger-bar', fullness);
+
+        setText('ui-mood-text', `${activeBeaver.mood} / 100`);
+        setWidth('ui-mood-bar', activeBeaver.mood);
+
+        const moodBonus = this.getMoodBonus(activeBeaver.mood);
+        setText('ui-mood-bonus-label', moodBonus.label);
+        this.updateTimeOfDayUI();
+
+        this.updateStaminaUI();
+
+        const visitBanner = document.getElementById('visiting-banner');
+        const homePanel = document.getElementById('panel-home-actions');
+        const visitPanel = document.getElementById('panel-visit-actions');
+        const editNameBtn = document.getElementById('btn-edit-name');
+
+        if (visitBanner) visitBanner.classList.toggle('hidden', !isVisit);
+        if (homePanel) homePanel.classList.toggle('hidden', isVisit);
+        if (visitPanel) visitPanel.classList.toggle('hidden', !isVisit);
+        if (editNameBtn) editNameBtn.classList.toggle('hidden', isVisit);
+
+        if (isVisit) {
+          setText('visit-owner-name', this.visitingTarget.ownerName);
+          setText('visit-beaver-name', this.visitingTarget.beaverName);
+        }
+      }
+
+      renderNeighbors() {
+        const container = document.getElementById('content-neighbors');
+        container.innerHTML = '';
+
+        const sorted = [...this.neighbors].sort((a, b) => {
+          const aFav = this.state.user.favoriteIds.includes(a.uid) ? 1 : 0;
+          const bFav = this.state.user.favoriteIds.includes(b.uid) ? 1 : 0;
+          if (aFav !== bFav) return bFav - aFav;
+          return b.damLevel - a.damLevel;
+        });
+
+        sorted.forEach((n) => {
+          const stage = this.getGrowthStage(n.damLevel);
+          const isFav = this.state.user.favoriteIds.includes(n.uid);
+
+          const card = document.createElement('div');
+          card.className = `flex items-center justify-between p-3 rounded-2xl border transition ${
+            isFav
+              ? 'bg-rose-50/70 border-rose-300 hover:border-rose-400'
+              : 'bg-amber-50/80 border-amber-200 hover:border-amber-400'
+          }`;
+          card.innerHTML = `
+            <div class="min-w-0 pr-2">
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <svg class="w-4 h-4 shrink-0"><use href="#ico-beaver"/></svg>
+                <span class="font-extrabold text-sm text-amber-950 truncate">${n.beaverName}</span>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-200 text-amber-900">ダムLv.${n.damLevel} (${stage.label})</span>
+                ${isFav ? '<span class="text-[10px] font-extrabold px-1.5 py-0.5 rounded-full bg-rose-500 text-white">★お気に入り</span>' : ''}
+              </div>
+              <p class="text-xs text-amber-700 font-bold truncate mt-0.5">飼い主: ${n.ownerName} <span class="text-[11px] text-amber-600">(${n.accountId})</span></p>
+              <p class="text-[11px] text-stone-600 truncate mt-0.5">「${n.comment}」</p>
+            </div>
+            <button type="button" data-visit-uid="${n.uid}" class="px-3 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-extrabold shadow-xs shrink-0 transition">
+              行く
+            </button>
+          `;
+          container.appendChild(card);
+        });
+
+        container.querySelectorAll('button[data-visit-uid]').forEach((btn) => {
+          btn.addEventListener('click', (e) => {
+            this.visitNeighbor(e.currentTarget.getAttribute('data-visit-uid'));
+          });
+        });
+      }
+
+      setFriendSortMode(mode) {
+        this.friendSortMode = mode;
+        document.querySelectorAll('button[data-friend-sort]').forEach((btn) => {
+          const isSelected = btn.getAttribute('data-friend-sort') === mode;
+          if (mode === 'fav_first' && isSelected) {
+            btn.className = 'px-2 py-1 rounded-lg text-[11px] font-extrabold bg-rose-500 text-white shadow-2xs transition';
+          } else if (isSelected) {
+            btn.className = 'px-2 py-1 rounded-lg text-[11px] font-extrabold bg-amber-500 text-white shadow-2xs transition';
+          } else {
+            btn.className = 'px-2 py-1 rounded-lg text-[11px] font-extrabold bg-amber-100 hover:bg-amber-200 text-amber-900 transition';
+          }
+        });
+        this.sound.playPop(400);
+        this.renderFriendsTab();
+      }
+
+      renderFriendsTab() {
+        const container = document.getElementById('friends-list-container');
+        if (!container) return;
+        container.innerHTML = '';
+
+        const favorites = this.neighbors.filter((n) => this.state.user.favoriteIds.includes(n.uid));
+        favorites.sort((a, b) => {
+          if (this.friendSortMode === 'dam_desc') {
+            if (b.damLevel !== a.damLevel) return b.damLevel - a.damLevel;
+            return a.ownerName.localeCompare(b.ownerName, 'ja');
+          }
+          if (b.damLevel !== a.damLevel) return b.damLevel - a.damLevel;
+          return a.ownerName.localeCompare(b.ownerName, 'ja');
+        });
+
+        if (favorites.length === 0) {
+          container.innerHTML = '<p class="col-span-full text-xs font-bold text-stone-500 bg-amber-50/60 rounded-xl p-3 border border-amber-100">まだお気に入りがいません。上のID検索から気になる川辺をお気に入り登録してみましょう！</p>';
+          return;
+        }
+
+        favorites.forEach((n) => {
+          const stage = this.getGrowthStage(n.damLevel);
+          const item = document.createElement('div');
+          item.className = 'p-3 rounded-2xl border bg-rose-50/70 border-rose-300 flex items-center justify-between gap-2';
+          item.innerHTML = `
+            <div class="min-w-0">
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <span class="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-amber-100 text-amber-950">${n.accountId}</span>
+                <span class="text-xs sm:text-sm font-extrabold text-amber-950 truncate">${n.ownerName}</span>
+                <span class="text-[10px] font-extrabold px-1.5 py-0.2 rounded-full bg-rose-500 text-white">★お気に入り</span>
+              </div>
+              <p class="text-[11px] text-amber-700 font-bold mt-0.5">
+                ${n.beaverName}（ダムLv.${n.damLevel}・${stage.label}）
+              </p>
+              <div class="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                <button type="button" data-fr-visit="${n.uid}" class="px-2.5 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-[11px] font-extrabold transition">
+                  川辺へ行く
+                </button>
+              </div>
+            </div>
+            <button type="button" data-fr-fav="${n.uid}" title="お気に入り解除" class="p-2 rounded-xl border text-xs font-extrabold shrink-0 transition bg-rose-500 text-white border-rose-600">
+              ★
+            </button>
+          `;
+          container.appendChild(item);
+        });
+
+        container.querySelectorAll('button[data-fr-visit]').forEach((btn) => {
+          btn.addEventListener('click', (e) => {
+            this.visitNeighbor(e.currentTarget.getAttribute('data-fr-visit'));
+          });
+        });
+
+        container.querySelectorAll('button[data-fr-fav]').forEach((btn) => {
+          btn.addEventListener('click', (e) => {
+            this.toggleFavorite(e.currentTarget.getAttribute('data-fr-fav'));
+          });
+        });
+      }
+
+      renderGuestbook() {
+        const container = document.getElementById('content-guestbook');
+        const badge = document.getElementById('ui-guestbook-badge');
+        badge.textContent = this.state.guestbook.length;
+        container.innerHTML = '';
+
+        this.state.guestbook.forEach((entry) => {
+          const minsAgo = Math.max(1, Math.floor((Date.now() - entry.timestamp) / 60000));
+          const timeLabel = minsAgo >= 60 ? `${Math.floor(minsAgo / 60)}時間前` : `${minsAgo}分前`;
+          const iconId = entry.action === 'gift_wood' ? '#ico-wood' : '#ico-heart';
+
+          const row = document.createElement('div');
+          row.className = 'flex items-start gap-2.5 p-2.5 rounded-xl bg-amber-50/70 border border-amber-100';
+          row.innerHTML = `
+            <div class="w-8 h-8 rounded-full bg-white border border-amber-200 flex items-center justify-center shrink-0">
+              <svg class="w-4 h-4"><use href="${iconId}"/></svg>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-extrabold text-amber-950">${entry.visitorName} <span class="font-normal text-amber-700">(${entry.beaverName})</span></span>
+                <span class="text-[10px] text-stone-400 font-bold">${timeLabel}</span>
+              </div>
+              <p class="text-xs text-stone-700 mt-0.5">${entry.message}</p>
+            </div>
+          `;
+          container.appendChild(row);
+        });
+      }
+
+      switchTab(tabName) {
+        const isNeighbors = tabName === 'neighbors';
+        const isFriends = tabName === 'friends';
+        const isGuestbook = tabName === 'guestbook';
+
+        document.getElementById('content-neighbors').classList.toggle('hidden', !isNeighbors);
+        document.getElementById('content-friends').classList.toggle('hidden', !isFriends);
+        document.getElementById('content-guestbook').classList.toggle('hidden', !isGuestbook);
+
+        const activeCls = 'px-3 py-1.5 rounded-xl text-xs sm:text-sm font-extrabold bg-amber-500 text-white shadow-sm transition inline-flex items-center gap-1.5';
+        const idleCls = 'px-3 py-1.5 rounded-xl text-xs sm:text-sm font-extrabold bg-amber-100 text-amber-800 hover:bg-amber-200 transition inline-flex items-center gap-1.5';
+
+        document.getElementById('tab-neighbors').className = isNeighbors ? activeCls : idleCls;
+        document.getElementById('tab-friends').className = isFriends ? activeCls : idleCls;
+        document.getElementById('tab-guestbook').className = isGuestbook ? activeCls : idleCls;
+      }
+
+      openModal({ title, desc, showInput, defaultValue = '', onConfirm }) {
+        const overlay = document.getElementById('modal-overlay');
+        const input = document.getElementById('modal-input');
+        document.getElementById('modal-title').textContent = title;
+        document.getElementById('modal-desc').textContent = desc;
+
+        if (showInput) {
+          input.classList.remove('hidden');
+          input.value = defaultValue;
+        } else {
+          input.classList.add('hidden');
+        }
+
+        overlay.classList.remove('hidden');
+
+        const close = () => overlay.classList.add('hidden');
+        document.getElementById('modal-cancel').onclick = close;
+        document.getElementById('modal-confirm').onclick = () => {
+          close();
+          onConfirm(input.value);
+        };
+      }
+
+      // トースト通知
+      showToast(message) {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = 'toast-anim max-w-full sm:max-w-lg bg-amber-950/95 text-amber-50 px-4 py-2 rounded-2xl sm:rounded-full text-xs sm:text-sm font-bold shadow-lg border border-amber-500/40 text-center break-words leading-snug';
+        toast.textContent = message;
+        container.appendChild(toast);
+
+        setTimeout(() => {
+          toast.style.opacity = '0';
+          toast.style.transition = 'opacity 0.25s ease';
+          setTimeout(() => toast.remove(), 250);
+        }, 2300);
+      }
+
+      /**
+       * ==========================================================================
+       * 4. メイン描画ループ (HTML5 Canvas)
+       * ==========================================================================
+       */
+      loop() {
+        this.time += 0.03;
+        try {
+          this.updateAnimations();
+          this.drawScene();
+        } catch (err) {
+          console.error('描画ループエラー:', err);
+        }
+        requestAnimationFrame(() => this.loop());
+      }
+
+      updateAnimations() {
+        if (this.beaverAnim.blinkTimer > 0) {
+          this.beaverAnim.blinkTimer -= 1;
+        } else {
+          this.beaverAnim.nextBlinkIn -= 1;
+          if (this.beaverAnim.nextBlinkIn <= 0) {
+            this.beaverAnim.blinkTimer = 10;
+            this.beaverAnim.nextBlinkIn = Math.random() < 0.25
+              ? 18
+              : Math.floor(110 + Math.random() * 170);
+          }
+        }
+
+        if (this.beaverAnim.frontLookTimer > 0) {
+          this.beaverAnim.frontLookTimer -= 1;
+        } else if (this.beaverAnim.frontLookCooldown > 0) {
+          this.beaverAnim.frontLookCooldown -= 1;
+        }
+
+        const dx = this.beaverAnim.targetXRatio - this.beaverAnim.xRatio;
+        if (Math.abs(dx) > 0.002) {
+          this.beaverAnim.xRatio += dx * 0.018;
+        }
+
+        let isOnDamTop = false;
+        if (this.beaverAnim.action === 'sleep' && Math.abs(this.beaverAnim.xRatio - 0.76) < 0.025) {
+          const activeDamLv = this.visitingTarget ? this.visitingTarget.damLevel : this.state.beaver.damLevel;
+          const cappedLv = Math.min(8, activeDamLv);
+          const damHeight = 32 + cappedLv * 8;
+          const logRows = 2 + Math.floor(cappedLv * 0.8);
+          const topLogOffset = -2 - (logRows - 1) * 10 - 14;
+          this.beaverAnim.targetYOffset = Math.min(-18, topLogOffset - damHeight * 0.12);
+          if (Math.abs(this.beaverAnim.targetYOffset - this.beaverAnim.yOffset) < 2.5) {
+            isOnDamTop = true;
+          }
+        } else if (this.beaverAnim.action !== 'sleep') {
+          this.beaverAnim.targetYOffset = 0;
+        }
+
+        const dy = this.beaverAnim.targetYOffset - this.beaverAnim.yOffset;
+        if (Math.abs(dy) > 0.1) {
+          this.beaverAnim.yOffset += dy * 0.05;
+        }
+
+        if (this.beaverAnim.action === 'sleep') {
+          const nowMs = performance.now();
+          if (isOnDamTop && !this.beaverAnim.sleepHasClosedEyes) {
+            // ダムの上に登りきってから目を閉じ、最低30秒〜最長3分の睡眠タイマーを開始
+            this.beaverAnim.sleepHasClosedEyes = true;
+            this.beaverAnim.sleepStartedAtMs = nowMs;
+            const sleepDurationMs = 30000 + Math.random() * 150000;
+            this.beaverAnim.sleepEndAtMs = nowMs + sleepDurationMs;
+          }
+          if (this.beaverAnim.sleepHasClosedEyes && nowMs >= this.beaverAnim.sleepEndAtMs) {
+            this.wakeBeaverFromDam(false);
+          }
+        } else if (this.beaverAnim.actionTimer > 0) {
+          this.beaverAnim.actionTimer -= 1;
+          if (this.beaverAnim.actionTimer <= 0) {
+            this.beaverAnim.action = 'idle';
+          }
+        } else {
+          const tod = this.getTimeOfDayInfo(this.state && this.state.gameClock ? this.state.gameClock.hour : 12);
+          const isMorningOrDay = tod.period === 'morning' || tod.period === 'day';
+          const r = Math.random();
+          if (isMorningOrDay && r < 0.0022 && this.beaverAnim.frontLookTimer <= 0) {
+            this.startDamNap(480);
+          } else if (r < 0.006 && this.beaverAnim.frontLookTimer <= 0 && this.beaverAnim.frontLookCooldown <= 0) {
+            this.beaverAnim.frontLookTimer = Math.floor(110 + Math.random() * 140);
+            this.beaverAnim.frontLookCooldown = Math.floor(180 + Math.random() * 200);
+          } else if (r < 0.011 && this.beaverAnim.frontLookTimer <= 0) {
+            this.beaverAnim.targetXRatio = 0.26 + Math.random() * 0.4;
+            this.beaverAnim.facing = this.beaverAnim.targetXRatio >= this.beaverAnim.xRatio ? 1 : -1;
+            this.beaverAnim.action = 'swim';
+            this.beaverAnim.actionTimer = 140;
+          }
+        }
+
+        const isSleepingAsleep = this.beaverAnim.action === 'sleep' && this.beaverAnim.sleepHasClosedEyes;
+        const isSwimming = this.beaverAnim.action === 'swim' || (this.beaverAnim.action === 'sleep' && !this.beaverAnim.sleepHasClosedEyes);
+        const bounceSpeed = isSleepingAsleep ? 1.4 : isSwimming ? 3.2 : this.beaverAnim.action === 'happy' ? 6 : 2.2;
+        const bounceAmp = isSleepingAsleep ? 1.6 : isSwimming ? 4.5 : this.beaverAnim.action === 'happy' ? 7 : 3;
+        this.beaverAnim.bobOffset = Math.sin(this.time * bounceSpeed) * bounceAmp;
+
+        this.ripples.forEach((r) => {
+          r.radius += 0.9;
+          r.alpha *= 0.96;
+        });
+        this.ripples = this.ripples.filter((r) => r.radius < r.maxRadius && r.alpha > 0.03);
+
+        this.particles.forEach((p) => {
+          p.x += p.vx;
+          p.y += p.vy;
+          p.life -= 1;
+        });
+        this.particles = this.particles.filter((p) => p.life > 0);
+
+        // レベルアップ花火の打ち上げ＆火花更新（5秒間）
+        const now = performance.now();
+        if (this.fireworkEndTime > now && now >= this.nextFireworkLaunchAt) {
+          this.launchSingleFirework();
+          this.nextFireworkLaunchAt = now + 380 + Math.random() * 260;
+        }
+
+        this.fireworks.forEach((fw) => {
+          fw.trail.push({ x: fw.x, y: fw.y });
+          if (fw.trail.length > 7) fw.trail.shift();
+          fw.x += fw.vx;
+          fw.y += fw.vy;
+          fw.vy += 0.065;
+          if (fw.y <= fw.targetY || fw.vy >= -0.4) {
+            fw.exploded = true;
+            this.burstFirework(fw);
+          }
+        });
+        this.fireworks = this.fireworks.filter((fw) => !fw.exploded);
+
+        this.fireworkSparks.forEach((sp) => {
+          sp.x += sp.vx;
+          sp.y += sp.vy;
+          sp.vx *= 0.965;
+          sp.vy = sp.vy * 0.965 + 0.045;
+          sp.life -= 1;
+        });
+        this.fireworkSparks = this.fireworkSparks.filter((sp) => sp.life > 0);
+      }
+
+      drawScene() {
+        const ctx = this.ctx;
+        const w = this.width;
+        const h = this.height;
+        const waterY = h * 0.56;
+        const tod = this.getTimeOfDayInfo(this.state && this.state.gameClock ? this.state.gameClock.hour : 12);
+
+        const skyGrad = ctx.createLinearGradient(0, 0, 0, waterY);
+        skyGrad.addColorStop(0, tod.skyTop);
+        skyGrad.addColorStop(1, tod.skyBottom);
+        ctx.fillStyle = skyGrad;
+        ctx.fillRect(0, 0, w, waterY);
+
+        if (tod.period === 'night') {
+          ctx.fillStyle = 'rgba(254, 249, 195, 0.85)';
+          const starCoords = [[0.12, 0.12], [0.28, 0.2], [0.46, 0.1], [0.64, 0.18], [0.83, 0.12], [0.91, 0.25]];
+          starCoords.forEach(([sx, sy], idx) => {
+            const twinkle = 0.55 + 0.45 * Math.sin(this.time * 3 + idx * 1.4);
+            ctx.globalAlpha = twinkle;
+            ctx.beginPath();
+            ctx.arc(w * sx, h * sy, (idx % 2 === 0 ? 1.8 : 1.3), 0, Math.PI * 2);
+            ctx.fill();
+          });
+          ctx.globalAlpha = 1;
+          ctx.fillStyle = '#fef08a';
+          ctx.beginPath();
+          ctx.arc(w * 0.84, h * 0.16, 13, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (tod.period === 'morning' || tod.period === 'evening') {
+          ctx.fillStyle = tod.period === 'evening' ? 'rgba(255, 237, 213, 0.85)' : 'rgba(255, 251, 235, 0.78)';
+          ctx.beginPath();
+          ctx.arc(w * 0.82, h * (tod.period === 'evening' ? 0.34 : 0.22), 16, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        this.drawCloud(ctx, ((w * 0.2 + this.time * 8) % (w + 140)) - 70, h * 0.14, 0.9);
+        this.drawCloud(ctx, ((w * 0.72 + this.time * 5) % (w + 140)) - 70, h * 0.21, 0.7);
+
+        const hillBackGrad = ctx.createLinearGradient(0, h * 0.28, 0, waterY);
+        hillBackGrad.addColorStop(0, tod.hillBack);
+        hillBackGrad.addColorStop(1, tod.hillFront);
+        ctx.fillStyle = hillBackGrad;
+        ctx.beginPath();
+        ctx.moveTo(0, waterY);
+        ctx.quadraticCurveTo(w * 0.28, h * 0.28, w * 0.62, waterY);
+        ctx.fill();
+
+        const hillFrontGrad = ctx.createLinearGradient(0, h * 0.24, 0, waterY);
+        hillFrontGrad.addColorStop(0, tod.hillFront);
+        hillFrontGrad.addColorStop(1, tod.period === 'night' ? '#052e16' : '#15803d');
+        ctx.fillStyle = hillFrontGrad;
+        ctx.beginPath();
+        ctx.moveTo(w * 0.35, waterY);
+        ctx.quadraticCurveTo(w * 0.75, h * 0.24, w, waterY);
+        ctx.fill();
+
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.moveTo(0, waterY);
+        ctx.quadraticCurveTo(w * 0.28, h * 0.28, w * 0.62, waterY);
+        ctx.stroke();
+
+        ctx.fillStyle = 'rgba(21, 128, 61, 0.28)';
+        const treeCount = Math.max(8, Math.floor(w / 75));
+        for (let i = 0; i < treeCount; i++) {
+          const tx = w * (0.14 + (i / Math.max(1, treeCount - 1)) * 0.8);
+          const ridgeRatio = Math.max(0.1, Math.abs(tx / w - 0.62) / 0.52);
+          const ty = waterY - (1 - Math.min(1, ridgeRatio)) * (h * 0.14) - 2;
+          ctx.beginPath();
+          ctx.arc(tx, ty, 5.5 + (i % 3) * 1.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        const waterGrad = ctx.createLinearGradient(0, waterY, 0, h);
+        waterGrad.addColorStop(0, tod.waterTop);
+        waterGrad.addColorStop(0.5, tod.waterMid);
+        waterGrad.addColorStop(1, tod.waterBottom);
+        ctx.fillStyle = waterGrad;
+        ctx.fillRect(0, waterY, w, h - waterY);
+
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.32)';
+        ctx.lineWidth = 2;
+        for (let i = 0; i < 6; i++) {
+          const lx = ((i * 140 + this.time * 18) % (w + 100)) - 50;
+          const ly = waterY + 18 + (i % 3) * 26;
+          ctx.beginPath();
+          ctx.moveTo(lx, ly);
+          ctx.lineTo(lx + 42, ly);
+          ctx.stroke();
+        }
+
+        this.ripples.forEach((r) => {
+          ctx.strokeStyle = `rgba(255, 255, 255, ${r.alpha})`;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.ellipse(r.x, r.y, r.radius, r.radius * 0.35, 0, 0, Math.PI * 2);
+          ctx.stroke();
+        });
+
+        ctx.fillStyle = tod.period === 'night' ? '#14532d' : '#22c55e';
+        ctx.beginPath();
+        ctx.moveTo(0, waterY - 8);
+        ctx.quadraticCurveTo(w * 0.16, waterY - 4, w * 0.22, h);
+        ctx.lineTo(0, h);
+        ctx.closePath();
+        ctx.fill();
+
+        const activeDamLv = this.visitingTarget ? this.visitingTarget.damLevel : this.state.beaver.damLevel;
+        const activeColor = this.visitingTarget ? this.visitingTarget.color : this.state.beaver.color;
+        const activeBodyStyle = this.visitingTarget ? this.visitingTarget.bodyStyle : this.state.beaver.bodyStyle;
+        const activeHunger = this.visitingTarget ? this.visitingTarget.hunger : this.state.beaver.hunger;
+        const stage = this.getGrowthStage(activeDamLv);
+
+        this.drawDam(ctx, w * 0.78, waterY + 6, activeDamLv);
+
+        const bx = w * this.beaverAnim.xRatio;
+        const by = waterY + 12 + this.beaverAnim.yOffset + this.beaverAnim.bobOffset;
+        this.drawBeaver(ctx, bx, by, stage.scale, activeColor, activeHunger, activeBodyStyle);
+        if (this.beaverAnim.action === 'sleep' && this.beaverAnim.sleepHasClosedEyes) {
+          this.drawSleepZzz(ctx, bx + 12 * stage.scale, by - 24 * stage.scale);
+        }
+        ctx.fillStyle = this.beaverAnim.action === 'sleep' && this.beaverAnim.sleepHasClosedEyes
+          ? 'rgba(69, 26, 3, 0.25)'
+          : 'rgba(14, 116, 144, 0.22)';
+        ctx.beginPath();
+        ctx.ellipse(bx, by + 18 * stage.scale, 34 * stage.scale, 7 * stage.scale, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        this.particles.forEach((p) => {
+          const alpha = Math.min(1, p.life / 35);
+          this.drawParticleVector(ctx, p.type, p.x, p.y, p.rot, alpha);
+        });
+
+        this.drawFireworks(ctx);
+      }
+
+      drawFireworks(ctx) {
+        if (this.fireworks.length === 0 && this.fireworkSparks.length === 0) return;
+        ctx.save();
+
+        // 打ち上げ中の火の玉と軌跡
+        this.fireworks.forEach((fw) => {
+          fw.trail.forEach((pt, idx) => {
+            const ratio = (idx + 1) / fw.trail.length;
+            ctx.globalAlpha = ratio * 0.65;
+            ctx.fillStyle = fw.colors[0];
+            ctx.beginPath();
+            ctx.arc(pt.x, pt.y, 1.5 + ratio * 1.8, 0, Math.PI * 2);
+            ctx.fill();
+          });
+          ctx.globalAlpha = 1;
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.arc(fw.x, fw.y, 3.2, 0, Math.PI * 2);
+          ctx.fill();
+        });
+
+        // 炸裂後のカラフルな火花（水面へのほんのり反射も描画）
+        const waterY = this.height * 0.56;
+        this.fireworkSparks.forEach((sp) => {
+          const alpha = Math.max(0, Math.min(1, sp.life / (sp.maxLife * 0.65)));
+          ctx.globalAlpha = alpha;
+          ctx.fillStyle = sp.color;
+          ctx.beginPath();
+          ctx.arc(sp.x, sp.y, sp.size, 0, Math.PI * 2);
+          ctx.fill();
+
+          // 水面下の反射光
+          if (sp.y < waterY) {
+            const reflY = waterY + (waterY - sp.y) * 0.45;
+            if (reflY < this.height) {
+              ctx.globalAlpha = alpha * 0.25;
+              ctx.beginPath();
+              ctx.ellipse(sp.x, reflY, sp.size * 1.4, sp.size * 0.6, 0, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          }
+        });
+
+        ctx.restore();
+      }
+
+      drawSleepZzz(ctx, x, y) {
+        ctx.save();
+        ctx.font = '800 12px "M PLUS Rounded 1c", sans-serif';
+        ctx.textAlign = 'left';
+        [0, 1, 2].forEach((idx) => {
+          const cycle = ((this.time * 0.65 + idx * 0.34) % 1);
+          const ox = idx * 8 + cycle * 6;
+          const oy = -cycle * 20 - idx * 4;
+          const alpha = Math.sin(cycle * Math.PI);
+          ctx.globalAlpha = Math.max(0, Math.min(0.9, alpha));
+          ctx.fillStyle = '#fef9c3';
+          ctx.strokeStyle = '#78350f';
+          ctx.lineWidth = 2.2;
+          const label = idx === 2 ? 'Zzz' : 'z';
+          ctx.strokeText(label, x + ox, y + oy);
+          ctx.fillText(label, x + ox, y + oy);
+        });
+        ctx.restore();
+      }
+
+      drawCloud(ctx, x, y, scale) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.scale(scale, scale);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+        ctx.beginPath();
+        ctx.arc(0, 0, 18, 0, Math.PI * 2);
+        ctx.arc(16, -4, 22, 0, Math.PI * 2);
+        ctx.arc(36, 0, 17, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      drawParticleVector(ctx, type, x, y, rot, alpha) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(rot || 0);
+        ctx.globalAlpha = alpha;
+
+        if (type === 'heart') {
+          ctx.fillStyle = '#f43f5e';
+          ctx.beginPath();
+          ctx.moveTo(0, 6);
+          ctx.bezierCurveTo(-10, -2, -6, -10, 0, -4);
+          ctx.bezierCurveTo(6, -10, 10, -2, 0, 6);
+          ctx.fill();
+        } else if (type === 'apple') {
+          ctx.fillStyle = '#ef4444';
+          ctx.beginPath();
+          ctx.arc(0, 1, 7, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#22c55e';
+          ctx.beginPath();
+          ctx.ellipse(3, -6, 4, 2, -0.4, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (type === 'branch') {
+          ctx.strokeStyle = '#78350f';
+          ctx.lineWidth = 2.4;
+          ctx.lineCap = 'round';
+          ctx.beginPath();
+          ctx.moveTo(-7, 6);
+          ctx.lineTo(7, -6);
+          ctx.stroke();
+          ctx.fillStyle = '#22c55e';
+          ctx.beginPath();
+          ctx.ellipse(-1, -1, 4.5, 2.5, -0.6, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (type === 'wood') {
+          ctx.fillStyle = '#92400e';
+          ctx.beginPath();
+          ctx.roundRect(-8, -3.5, 16, 7, 3);
+          ctx.fill();
+          ctx.fillStyle = '#fde68a';
+          ctx.beginPath();
+          ctx.ellipse(7, 0, 2.2, 3.2, 0, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (type === 'sparkle') {
+          ctx.fillStyle = '#facc15';
+          ctx.beginPath();
+          ctx.moveTo(0, -8);
+          ctx.lineTo(2.4, -2.4);
+          ctx.lineTo(8, 0);
+          ctx.lineTo(2.4, 2.4);
+          ctx.lineTo(0, 8);
+          ctx.lineTo(-2.4, 2.4);
+          ctx.lineTo(-8, 0);
+          ctx.lineTo(-2.4, -2.4);
+          ctx.closePath();
+          ctx.fill();
+        }
+
+        ctx.restore();
+      }
+
+      drawDam(ctx, baseX, baseY, level) {
+        ctx.save();
+        const cappedLv = Math.min(8, level);
+        const damWidth = 85 + cappedLv * 12;
+        const damHeight = 32 + cappedLv * 8;
+
+        const baseGrad = ctx.createLinearGradient(baseX, baseY - damHeight * 0.5, baseX, baseY + 14);
+        baseGrad.addColorStop(0, '#78350f');
+        baseGrad.addColorStop(1, '#451a03');
+        ctx.fillStyle = baseGrad;
+        ctx.beginPath();
+        ctx.ellipse(baseX, baseY + 10, damWidth * 0.65, damHeight * 0.7, 0, Math.PI, 0);
+        ctx.fill();
+
+        ctx.strokeStyle = 'rgba(253, 230, 138, 0.16)';
+        ctx.lineWidth = 1.2;
+        for (let g = -2; g <= 2; g++) {
+          ctx.beginPath();
+          ctx.moveTo(baseX - damWidth * 0.45, baseY + 2 + g * 3);
+          ctx.lineTo(baseX + damWidth * 0.45, baseY + 2 + g * 3);
+          ctx.stroke();
+        }
+
+        const logRows = 2 + Math.floor(cappedLv * 0.8);
+        for (let r = 0; r < logRows; r++) {
+          const cols = 3 + (r % 2);
+          for (let c = 0; c < cols; c++) {
+            const lx = baseX - damWidth * 0.42 + c * 24 + (r % 2) * 8;
+            const ly = baseY + 2 - r * 10;
+            ctx.save();
+            ctx.translate(lx, ly);
+            ctx.rotate(((c - 1) * 0.18) + (r % 2 === 0 ? 0.08 : -0.08));
+
+            const logGrad = ctx.createLinearGradient(0, -5, 0, 5);
+            if ((r + c) % 2 === 0) {
+              logGrad.addColorStop(0, '#b45309');
+              logGrad.addColorStop(0.5, '#92400e');
+              logGrad.addColorStop(1, '#5c2808');
+            } else {
+              logGrad.addColorStop(0, '#d97706');
+              logGrad.addColorStop(0.5, '#b45309');
+              logGrad.addColorStop(1, '#78350f');
+            }
+            ctx.fillStyle = logGrad;
+            ctx.beginPath();
+            ctx.roundRect(-18, -5, 36, 10, 5);
+            ctx.fill();
+
+            ctx.strokeStyle = 'rgba(41, 18, 6, 0.55)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(-13, -2);
+            ctx.lineTo(9, -2);
+            ctx.moveTo(-11, 2.2);
+            ctx.lineTo(11, 2.2);
+            ctx.stroke();
+
+            ctx.fillStyle = '#fde68a';
+            ctx.beginPath();
+            ctx.arc(16, 0, 4.2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#b45309';
+            ctx.lineWidth = 0.85;
+            ctx.beginPath();
+            ctx.arc(16, 0, 2.2, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+          }
+        }
+
+        if (level >= 3) {
+          ctx.fillStyle = '#16a34a';
+          ctx.beginPath();
+          ctx.arc(baseX - 25, baseY - damHeight * 0.45, 9, 0, Math.PI * 2);
+          ctx.arc(baseX + 20, baseY - damHeight * 0.35, 8, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        if (level >= 5) {
+          const flagTopY = baseY - damHeight * 0.65 - 24;
+          ctx.strokeStyle = '#fef3c7';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.moveTo(baseX, baseY - damHeight * 0.5);
+          ctx.lineTo(baseX, flagTopY);
+          ctx.stroke();
+
+          ctx.fillStyle = '#f43f5e';
+          ctx.beginPath();
+          ctx.moveTo(baseX, flagTopY);
+          ctx.lineTo(baseX + 22, flagTopY + 7);
+          ctx.lineTo(baseX, flagTopY + 14);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      drawBeaver(ctx, x, y, scale, furColor, hunger = 20, bodyStyle = null) {
+        const isHappy = this.beaverAnim.action === 'happy';
+        const isEating = this.beaverAnim.action === 'eat';
+        const isBuilding = this.beaverAnim.action === 'build';
+        const isSleeping = this.beaverAnim.action === 'sleep' && this.beaverAnim.sleepHasClosedEyes;
+        const isClimbingToNap = this.beaverAnim.action === 'sleep' && !this.beaverAnim.sleepHasClosedEyes;
+        const isWorking = isEating || isBuilding;
+        const isSwimming = this.beaverAnim.action === 'swim' || isClimbingToNap;
+        const isRefusing = this.beaverAnim.action === 'refuse';
+        const isBlinking = this.beaverAnim.blinkTimer > 0 || isSleeping;
+        const metrics = this.getBodyMetrics(bodyStyle);
+
+        const sadLevel = hunger >= 80 ? 3 : hunger >= 60 ? 2 : hunger >= 40 ? 1 : 0;
+        const isFrontFacing = (this.beaverAnim.frontLookTimer > 0 || isRefusing)
+          && !isSwimming && !isBuilding && this.beaverAnim.action !== 'sleep';
+
+        if (isFrontFacing) {
+          this.drawBeaverFront(ctx, x, y, scale, furColor, {
+            isHappy,
+            isEating,
+            isRefusing,
+            isBlinking,
+            sadLevel,
+            metrics
+          });
+          return;
+        }
+
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.scale(scale * this.beaverAnim.facing, scale);
+
+        const dolphinWave = isSwimming ? Math.sin(this.time * 3.4) : 0;
+
+        // 1. 大きなしっぽ（ドルフィンキックに連動・長さと太さカスタマイズ対応・寝ているときは先端を下に降ろして静止）
+        ctx.save();
+        const tailFreq = isHappy ? 14 : isSwimming ? 3.4 : sadLevel >= 2 ? 1.8 : 4;
+        const tailWag = isSleeping
+          ? 0
+          : isSwimming
+            ? Math.sin(this.time * tailFreq - 0.8) * 0.28
+            : Math.sin(this.time * tailFreq) * (sadLevel >= 2 ? 0.06 : 0.18);
+        const tailBaseAngle = isSleeping ? -0.46 : sadLevel >= 2 ? -0.12 : -0.35;
+        ctx.translate(-29 * metrics.waistScaleX, (isSleeping ? 11.5 : 4.5) + sadLevel * 1.2 + (isSwimming ? dolphinWave * 3.5 : 0));
+        ctx.rotate(tailBaseAngle + tailWag);
+        ctx.scale(metrics.tailLengthScale, metrics.tailThicknessScale);
+        ctx.fillStyle = '#451a03';
+        ctx.beginPath();
+        ctx.ellipse(-18, 0, 22.5, 9.2, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#78350f';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(-29, -4);
+        ctx.lineTo(-7, 4);
+        ctx.moveTo(-29, 4);
+        ctx.lineTo(-7, -4);
+        ctx.stroke();
+        ctx.restore();
+
+        // 2. 奥側の後ろ足（ドルフィンキック時は両足を揃えてやや後方でゆらゆらパタパタする）
+        ctx.save();
+        const backFootKick = isSwimming
+          ? Math.sin(this.time * 3.4 - 0.5) * 0.42
+          : Math.sin(this.time * 3) * 0.05;
+        const backFootX = isSwimming ? -19.5 : -12;
+        const backFootY = isSwimming ? 8.5 + dolphinWave * 3.2 : 16;
+        ctx.translate(backFootX, backFootY);
+        ctx.rotate(backFootKick);
+        if (isSwimming) {
+          // 奥側の後ろ足：広がる水掻き膜と指先
+          ctx.fillStyle = 'rgba(249, 168, 212, 0.72)';
+          ctx.beginPath();
+          ctx.moveTo(-6, 0.5);
+          ctx.quadraticCurveTo(-13.5, -3.5, -15.5, 0.2);
+          ctx.quadraticCurveTo(-16.5, 2.5, -15.2, 5.2);
+          ctx.quadraticCurveTo(-13.0, 7.2, -6, 3.8);
+          ctx.closePath();
+          ctx.fill();
+
+          ctx.strokeStyle = '#3b1d0c';
+          ctx.lineWidth = 1.1;
+          ctx.lineCap = 'round';
+          ctx.beginPath();
+          ctx.moveTo(-7.5, 1.0);
+          ctx.lineTo(-14.8, 0.2);
+          ctx.moveTo(-7.8, 2.2);
+          ctx.lineTo(-15.5, 2.5);
+          ctx.moveTo(-7.5, 3.3);
+          ctx.lineTo(-14.5, 4.9);
+          ctx.stroke();
+        }
+        ctx.fillStyle = '#4a2511';
+        ctx.beginPath();
+        ctx.ellipse(-3.5, 2, 8.8, 5.2, -0.15, 0, Math.PI * 2);
+        ctx.fill();
+        if (!isSwimming) {
+          ctx.strokeStyle = '#fef3c7';
+          ctx.lineWidth = 1.1;
+          ctx.beginPath();
+          ctx.moveTo(-8, 1);
+          ctx.lineTo(-11, 0);
+          ctx.moveTo(-9, 3);
+          ctx.lineTo(-12, 3);
+          ctx.moveTo(-8, 5);
+          ctx.lineTo(-11, 6);
+          ctx.stroke();
+        }
+        ctx.restore();
+
+        // 3. 奥側の前足
+        ctx.save();
+        const backArmSwing = isWorking
+          ? Math.cos(this.time * 18) * 5.5
+          : isHappy
+            ? -6 + Math.sin(this.time * 12) * 3
+            : sadLevel >= 2
+              ? 3.0
+              : Math.sin(this.time * 3) * 1.5;
+        ctx.translate(7.5, -1.5 + backArmSwing);
+        ctx.rotate(isHappy ? -0.55 : isWorking ? -0.25 : sadLevel >= 2 ? 0.5 : 0.25);
+        ctx.fillStyle = '#5c3317';
+        ctx.beginPath();
+        ctx.ellipse(4, 1, 6.2, 4.2, 0.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        // 4. ネズミの体型に近い洋梨型の胴体（腰まわりカスタマイズ対応）
+        ctx.save();
+        if (isSwimming) {
+          ctx.translate(0, dolphinWave * 1.6);
+          ctx.rotate(dolphinWave * 0.08);
+        }
+        ctx.scale(metrics.waistScaleX, metrics.waistScaleY);
+        ctx.fillStyle = furColor;
+        ctx.beginPath();
+        ctx.moveTo(-27, -2);
+        ctx.bezierCurveTo(-21, -19.5, 1, -16.5, 13.5, -7.2);
+        ctx.bezierCurveTo(18.5, -1.8, 17.5, 8.8, 9.5, 14.5);
+        ctx.bezierCurveTo(-1, 20.5, -20, 20.5, -27.5, 12.2);
+        ctx.bezierCurveTo(-31.5, 7, -30.5, 1.5, -27, -2);
+        ctx.closePath();
+        ctx.fill();
+
+        // 毛並みライン（胴体）
+        ctx.strokeStyle = 'rgba(41, 18, 6, 0.28)';
+        ctx.lineWidth = 1;
+        ctx.lineCap = 'round';
+        [-15, -6, 2].forEach((bxLine) => {
+          ctx.beginPath();
+          ctx.moveTo(bxLine, -11);
+          ctx.lineTo(bxLine - 2, -6);
+          ctx.stroke();
+        });
+
+        // お腹の明るい毛色
+        ctx.fillStyle = '#fde68a';
+        ctx.beginPath();
+        ctx.ellipse(5, 7.2, 9.2, 6.8, -0.1, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        // 5. 手前側の後ろ足（泳ぐときはやや後方でゆらゆらパタパタ、足裏ピンク丸は泳ぎ中非表示）
+        ctx.save();
+        const frontFootKick = isSwimming
+          ? Math.sin(this.time * 3.4 - 0.5) * 0.42
+          : -Math.sin(this.time * 3) * 0.05;
+        const frontFootX = isSwimming ? -16.5 : -9;
+        const frontFootY = isSwimming ? 9.5 + dolphinWave * 3.2 : 16.5;
+        ctx.translate(frontFootX, frontFootY);
+        ctx.rotate(frontFootKick);
+        if (isSwimming) {
+          // 手前側の後ろ足：ぷにっとかわいい水掻き膜と指先の筋
+          ctx.fillStyle = 'rgba(249, 168, 212, 0.85)';
+          ctx.strokeStyle = '#6b3416';
+          ctx.lineWidth = 1.0;
+          ctx.beginPath();
+          ctx.moveTo(-6.5, 0.2);
+          ctx.quadraticCurveTo(-15.0, -4.2, -17.2, 0.0);
+          ctx.quadraticCurveTo(-18.2, 2.5, -16.8, 5.6);
+          ctx.quadraticCurveTo(-14.2, 8.0, -6.5, 4.0);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.strokeStyle = '#3b1d0c';
+          ctx.lineWidth = 1.25;
+          ctx.lineCap = 'round';
+          ctx.beginPath();
+          ctx.moveTo(-8.0, 0.8);
+          ctx.lineTo(-16.5, -0.1);
+          ctx.moveTo(-8.2, 2.1);
+          ctx.lineTo(-17.4, 2.5);
+          ctx.moveTo(-8.0, 3.4);
+          ctx.lineTo(-16.0, 5.2);
+          ctx.stroke();
+        }
+        ctx.fillStyle = '#5c3317';
+        ctx.beginPath();
+        ctx.ellipse(-2.5, 2, 9.8, 5.8, -0.1, 0, Math.PI * 2);
+        ctx.fill();
+        if (!isSwimming) {
+          ctx.fillStyle = 'rgba(251, 182, 206, 0.65)';
+          ctx.beginPath();
+          ctx.ellipse(-4, 3, 4.5, 2.5, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = '#3b1d0c';
+          ctx.lineWidth = 1.2;
+          ctx.beginPath();
+          ctx.moveTo(-9, 0.5);
+          ctx.lineTo(-12, -0.5);
+          ctx.moveTo(-10.5, 2.5);
+          ctx.lineTo(-13.5, 2.5);
+          ctx.moveTo(-9, 4.5);
+          ctx.lineTo(-12, 5.5);
+          ctx.stroke();
+        }
+        ctx.restore();
+
+        // 6. 頭（頭サイズカスタマイズ対応）
+        ctx.save();
+        const refuseWave = isRefusing
+          ? Math.sin(Math.min(1, Math.max(0, 1 - (this.beaverAnim.actionTimer / (this.beaverAnim.refuseDuration || 120)))) * Math.PI * 4)
+          : 0;
+        const refuseShakeX = isRefusing ? refuseWave * 4.5 : 0;
+        const headTilt = isRefusing ? refuseWave * 0.22 : (isSwimming ? dolphinWave * 0.06 : 0);
+        const headNod = sadLevel * 0.06;
+        ctx.translate(14.2 * metrics.waistScaleX + refuseShakeX, -9.2 * metrics.waistScaleY + sadLevel * 1.1 + (isSwimming ? dolphinWave * 1.4 : 0));
+        ctx.scale(metrics.headScale, metrics.headScale);
+        ctx.rotate(headNod + headTilt);
+
+        // 耳（横向き）
+        ctx.save();
+        ctx.translate(-3.5, -13.5 + sadLevel * 0.8);
+        ctx.rotate(-0.28 + sadLevel * 0.08);
+        ctx.fillStyle = '#5c3317';
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 5.2, 3.3, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#f9a8d4';
+        ctx.beginPath();
+        ctx.ellipse(-0.4, 0.2, 2.8, 1.7, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        // 頭本体
+        ctx.fillStyle = furColor;
+        ctx.beginPath();
+        ctx.moveTo(-12.5, -6.5);
+        ctx.bezierCurveTo(-11.5, -16.5, 4.5, -16.5, 11.5, -9.5);
+        ctx.bezierCurveTo(17.5, -4.5, 18.5, 4.5, 13.5, 9.5);
+        ctx.bezierCurveTo(6.5, 14.5, -9.5, 13.5, -12.5, 6.5);
+        ctx.closePath();
+        ctx.fill();
+
+        // 口元の明るい毛色
+        ctx.fillStyle = '#fde68a';
+        ctx.beginPath();
+        ctx.ellipse(9.5, 3.5, 7.5, 5.8, 0.1, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 前歯（30%下に長く調整）
+        ctx.fillStyle = '#ffffff';
+        ctx.strokeStyle = '#d6d3d1';
+        ctx.lineWidth = 0.9;
+        ctx.beginPath();
+        ctx.roundRect(12.2, 8.2, 3.1, 7.3, 1.1);
+        ctx.roundRect(15.3, 8.4, 2.8, 6.8, 1.1);
+        ctx.fill();
+        ctx.stroke();
+
+        // お鼻とほっぺ
+        ctx.fillStyle = '#292524';
+        ctx.beginPath();
+        ctx.ellipse(17.5, 2.2, 3.3, 2.5, 0.15, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = sadLevel >= 2 ? 'rgba(147, 197, 253, 0.35)' : 'rgba(244, 63, 94, 0.32)';
+        ctx.beginPath();
+        ctx.arc(2.6, 4.4, 3.3, 0, Math.PI * 2);
+        ctx.fill();
+
+        // お髭
+        const whiskerTwitch = isHappy ? Math.sin(this.time * 22) * 1.4 : Math.sin(this.time * 4) * 0.35;
+        const whiskerDroop = sadLevel * 1.2;
+        ctx.lineCap = 'round';
+        const frontWhiskerAngles = [-0.24, 0.02, 0.26];
+
+        ctx.strokeStyle = 'rgba(69, 26, 3, 0.65)';
+        ctx.lineWidth = 1.3;
+        frontWhiskerAngles.forEach((ang, idx) => {
+          ctx.beginPath();
+          const startX = 6.5;
+          const startY = 2.8 + idx * 1.3;
+          const endX = -2.5 - idx * 0.9;
+          const endY = startY + Math.sin(ang) * 8.0 + whiskerDroop * 0.8 - whiskerTwitch * 0.6;
+          ctx.moveTo(startX, startY);
+          ctx.quadraticCurveTo((startX + endX) * 0.5, startY - 1.0 + whiskerDroop * 0.3, endX, endY);
+          ctx.stroke();
+        });
+
+        ctx.strokeStyle = '#451a03';
+        frontWhiskerAngles.forEach((ang, idx) => {
+          ctx.beginPath();
+          const startX = 14.2;
+          const startY = 2.6 + idx * 1.35;
+          const endX = 24.5 + idx * 1.0;
+          const endY = startY + Math.sin(ang) * 8.5 + whiskerDroop + whiskerTwitch * 0.8;
+          ctx.moveTo(startX, startY);
+          ctx.quadraticCurveTo((startX + endX) * 0.5, startY - 1.0 + whiskerDroop * 0.35, endX, endY);
+          ctx.stroke();
+        });
+
+        // 目
+        const eyeX = 5.4;
+        const eyeY = -2.2;
+        ctx.strokeStyle = '#1c1917';
+        ctx.fillStyle = '#1c1917';
+        ctx.lineWidth = 2.1;
+
+        if (isSleeping) {
+          ctx.lineCap = 'round';
+          ctx.beginPath();
+          ctx.moveTo(eyeX - 3.6, eyeY - 0.3);
+          ctx.quadraticCurveTo(eyeX, eyeY + 2.2, eyeX + 3.6, eyeY - 0.3);
+          ctx.stroke();
+        } else if (isHappy || isEating) {
+          ctx.beginPath();
+          ctx.arc(eyeX, eyeY + 1, 3.4, Math.PI, 0);
+          ctx.stroke();
+        } else if (isBlinking) {
+          ctx.beginPath();
+          ctx.arc(eyeX, eyeY - 0.5, 3.3, 0.15 * Math.PI, 0.85 * Math.PI);
+          ctx.stroke();
+        } else {
+          ctx.beginPath();
+          ctx.arc(eyeX, eyeY, 2.6, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.arc(eyeX + 0.9, eyeY - 0.9, 0.9, 0, Math.PI * 2);
+          ctx.fill();
+
+          if (sadLevel >= 3) {
+            ctx.fillStyle = '#38bdf8';
+            ctx.beginPath();
+            ctx.arc(eyeX + 2.2, eyeY + 2.2, 1.3, 0, Math.PI * 2);
+            ctx.fill();
+          }
+
+          if (sadLevel >= 1) {
+            ctx.strokeStyle = '#3b1d0c';
+            ctx.lineWidth = 1.6;
+            ctx.beginPath();
+            const browDroop = sadLevel * 1.1;
+            ctx.moveTo(eyeX - 3.2, eyeY - 4.5 - browDroop * 0.4);
+            ctx.lineTo(eyeX + 3.4, eyeY - 4.0 + browDroop);
+            ctx.stroke();
+          }
+        }
+
+        ctx.restore();
+
+        // 手前側の前足
+        ctx.save();
+        const frontArmSwing = isWorking
+          ? -3 + Math.sin(this.time * 18) * 5.5
+          : isHappy
+            ? -7 + Math.cos(this.time * 12) * 3
+            : sadLevel >= 2
+              ? 3.5
+              : Math.cos(this.time * 3) * 1.5;
+        ctx.translate(10.5, 2.0 + frontArmSwing);
+        ctx.rotate(isHappy ? -0.6 : isWorking ? -0.35 : sadLevel >= 2 ? 0.45 : 0.18);
+
+        ctx.fillStyle = furColor;
+        ctx.beginPath();
+        ctx.moveTo(-3.5, -3.5);
+        ctx.quadraticCurveTo(4.0, -5.0, 9.5, -1.0);
+        ctx.quadraticCurveTo(11.5, 3.0, 7.5, 5.5);
+        ctx.quadraticCurveTo(1.5, 6.0, -3.5, 3.5);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.strokeStyle = 'rgba(41, 18, 6, 0.35)';
+        ctx.lineWidth = 0.95;
+        ctx.beginPath();
+        ctx.moveTo(0.5, -1.5);
+        ctx.lineTo(5.5, -0.5);
+        ctx.moveTo(0.5, 1.5);
+        ctx.lineTo(5.5, 2.2);
+        ctx.stroke();
+
+        ctx.fillStyle = '#5c3317';
+        ctx.beginPath();
+        ctx.ellipse(9.5, 1.5, 4.2, 3.8, 0.1, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#291206';
+        ctx.lineWidth = 1.15;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(12.5, -0.8);
+        ctx.lineTo(15.2, -1.5);
+        ctx.moveTo(13.2, 1.5);
+        ctx.lineTo(15.8, 1.5);
+        ctx.moveTo(12.5, 3.8);
+        ctx.lineTo(15.2, 4.5);
+        ctx.stroke();
+
+        ctx.restore();
+        ctx.restore();
+      }
+
+      drawBeaverFront(ctx, x, y, scale, furColor, { isHappy, isEating, isRefusing, isBlinking, sadLevel, metrics = null }) {
+        const m = metrics || this.getBodyMetrics(null);
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.scale(scale, scale);
+
+        let refuseWave = 0;
+        if (isRefusing) {
+          const dur = this.beaverAnim.refuseDuration || 120;
+          const progress = Math.min(1, Math.max(0, 1 - (this.beaverAnim.actionTimer / dur)));
+          refuseWave = Math.sin(progress * Math.PI * 4);
+        }
+        const refuseShakeX = isRefusing ? refuseWave * 4.5 : 0;
+        const headTilt = isRefusing ? refuseWave * 0.22 : 0;
+
+        // しっぽ（長さと太さカスタマイズ対応）
+        ctx.save();
+        const tailWag = Math.sin(this.time * (isHappy ? 14 : 4)) * 0.14;
+        ctx.translate(15 * m.waistScaleX, 6.5 * m.waistScaleY);
+        ctx.rotate(0.45 + tailWag);
+        ctx.scale(m.tailLengthScale, m.tailThicknessScale);
+        ctx.fillStyle = '#451a03';
+        ctx.beginPath();
+        ctx.ellipse(12.5, 0, 17, 8, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#78350f';
+        ctx.lineWidth = 1.1;
+        ctx.beginPath();
+        ctx.moveTo(4, -3);
+        ctx.lineTo(20, 3);
+        ctx.moveTo(4, 3);
+        ctx.lineTo(20, -3);
+        ctx.stroke();
+        ctx.restore();
+
+        // 腰まわりの正面胴体（腰まわりサイズ対応）
+        ctx.save();
+        ctx.scale(m.waistScaleX, m.waistScaleY);
+        ctx.fillStyle = furColor;
+        ctx.beginPath();
+        ctx.moveTo(0, -12.5);
+        ctx.bezierCurveTo(13, -12.5, 22.5, -1, 21.5, 9.5);
+        ctx.bezierCurveTo(20.5, 18.5, 11, 21.5, 0, 21.5);
+        ctx.bezierCurveTo(-11, 21.5, -20.5, 18.5, -21.5, 9.5);
+        ctx.bezierCurveTo(-22.5, -1, -13, -12.5, 0, -12.5);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = '#fde68a';
+        ctx.beginPath();
+        ctx.ellipse(0, 7.5, 11.5, 10.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        [-1, 1].forEach((side) => {
+          ctx.save();
+          ctx.translate(side * 13 * m.waistScaleX, 17 * m.waistScaleY);
+          ctx.rotate(side * 0.25);
+          ctx.fillStyle = '#5c3317';
+          ctx.beginPath();
+          ctx.ellipse(0, 2, 8.5, 5.2, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = 'rgba(251, 182, 206, 0.6)';
+          ctx.beginPath();
+          ctx.ellipse(0, 2.5, 4, 2.2, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        });
+
+        [-1, 1].forEach((side) => {
+          ctx.save();
+          const armWave = isRefusing
+            ? refuseWave * side * 3.2
+            : isHappy
+              ? -5 + Math.sin(this.time * 12) * 2.5
+              : Math.sin(this.time * 3 + side) * 1.2;
+          ctx.translate(side * 15 * m.waistScaleX, 1 + armWave);
+          ctx.rotate(side * (isRefusing ? -0.45 : isHappy ? -0.5 : 0.25));
+          ctx.fillStyle = furColor;
+          ctx.beginPath();
+          ctx.ellipse(side * 2, 1, 6.8, 4.8, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        });
+
+        ctx.save();
+        ctx.translate(refuseShakeX, -10.8 * m.waistScaleY + sadLevel * 1.1);
+        ctx.scale(m.headScale, m.headScale);
+        ctx.rotate(headTilt);
+
+        [-1, 1].forEach((side) => {
+          ctx.save();
+          ctx.translate(side * 16.5, -3.8 + sadLevel * 0.8);
+          ctx.rotate(side * (0.62 + sadLevel * 0.12));
+          ctx.fillStyle = '#5c3317';
+          ctx.beginPath();
+          ctx.moveTo(-3.8, 2.2);
+          ctx.quadraticCurveTo(-2.1, -2.8, -1.2, -4.4);
+          ctx.quadraticCurveTo(0, -5.6, 1.2, -4.4);
+          ctx.quadraticCurveTo(2.1, -2.8, 3.8, 2.2);
+          ctx.quadraticCurveTo(0, 3.0, -3.8, 2.2);
+          ctx.closePath();
+          ctx.fill();
+
+          ctx.fillStyle = '#f9a8d4';
+          ctx.beginPath();
+          ctx.moveTo(-1.8, 1.3);
+          ctx.quadraticCurveTo(-0.9, -1.5, -0.5, -2.4);
+          ctx.quadraticCurveTo(0, -3.1, 0.5, -2.4);
+          ctx.quadraticCurveTo(0.9, -1.5, 1.8, 1.3);
+          ctx.quadraticCurveTo(0, 1.8, -1.8, 1.3);
+          ctx.closePath();
+          ctx.fill();
+          ctx.restore();
+        });
+
+        ctx.fillStyle = furColor;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 19, 17, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = 'rgba(41, 18, 6, 0.32)';
+        ctx.lineWidth = 1.05;
+        ctx.lineCap = 'round';
+        [-12, -7, 7, 12].forEach((hx) => {
+          ctx.beginPath();
+          ctx.moveTo(hx, -10);
+          ctx.lineTo(hx * 1.05, -5);
+          ctx.stroke();
+        });
+
+        ctx.fillStyle = '#fde68a';
+        ctx.beginPath();
+        ctx.ellipse(0, 5.5, 11.5, 7.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 前歯（30%下に長く調整）
+        ctx.fillStyle = '#ffffff';
+        ctx.strokeStyle = '#d6d3d1';
+        ctx.lineWidth = 0.9;
+        ctx.beginPath();
+        ctx.roundRect(-3.6, 8.2, 3.3, 8.1, 1.2);
+        ctx.roundRect(0.3, 8.2, 3.3, 8.1, 1.2);
+        ctx.fill();
+        ctx.stroke();
+
+        if (isRefusing) {
+          ctx.strokeStyle = '#451a03';
+          ctx.lineWidth = 1.7;
+          ctx.lineCap = 'round';
+          ctx.beginPath();
+          ctx.moveTo(-6, 7.5);
+          ctx.quadraticCurveTo(-3, 5.5, 0, 7.5);
+          ctx.quadraticCurveTo(3, 5.5, 6, 7.5);
+          ctx.stroke();
+        }
+
+        ctx.fillStyle = '#292524';
+        ctx.beginPath();
+        ctx.ellipse(0, 1.5, 4.2, 2.8, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = sadLevel >= 2 ? 'rgba(147, 197, 253, 0.35)' : 'rgba(244, 63, 94, 0.35)';
+        ctx.beginPath();
+        ctx.arc(-13.8, 1.6, 3.4, 0, Math.PI * 2);
+        ctx.arc(13.8, 1.6, 3.4, 0, Math.PI * 2);
+        ctx.fill();
+
+        const whiskerTwitch = isHappy ? Math.sin(this.time * 22) * 1.5 : Math.sin(this.time * 4) * 0.4;
+        const whiskerDroop = sadLevel * 1.3;
+        ctx.strokeStyle = '#451a03';
+        ctx.lineWidth = 1.35;
+        ctx.lineCap = 'round';
+
+        [-1, 1].forEach((side) => {
+          [-0.2, 0.04, 0.28].forEach((ang, idx) => {
+            ctx.beginPath();
+            const startX = side * 7.5;
+            const startY = 2.8 + idx * 1.5;
+            const endX = side * (19 + idx * 1.2);
+            const endY = startY + Math.sin(ang) * 10 + whiskerDroop + whiskerTwitch * 0.8;
+            ctx.moveTo(startX, startY);
+            ctx.quadraticCurveTo((startX + endX) * 0.5, startY - 1.2 + whiskerDroop * 0.4, endX, endY);
+            ctx.stroke();
+          });
+        });
+
+        [-1, 1].forEach((side) => {
+          const ex = side * 7.8;
+          const ey = -3.4;
+          ctx.strokeStyle = '#1c1917';
+          ctx.fillStyle = '#1c1917';
+          ctx.lineWidth = 2.1;
+
+          if (isRefusing) {
+            ctx.beginPath();
+            ctx.moveTo(ex - side * 3, ey - 2.5);
+            ctx.lineTo(ex + side * 2, ey);
+            ctx.lineTo(ex - side * 3, ey + 2.5);
+            ctx.stroke();
+          } else if (isHappy || isEating) {
+            ctx.beginPath();
+            ctx.arc(ex, ey + 1, 3.3, Math.PI, 0);
+            ctx.stroke();
+          } else if (isBlinking) {
+            ctx.beginPath();
+            ctx.arc(ex, ey - 0.5, 3.2, 0.15 * Math.PI, 0.85 * Math.PI);
+            ctx.stroke();
+          } else {
+            ctx.beginPath();
+            ctx.arc(ex, ey, 2.7, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(ex + 0.9, ey - 0.9, 0.95, 0, Math.PI * 2);
+            ctx.fill();
+
+            if (sadLevel >= 3) {
+              ctx.fillStyle = '#38bdf8';
+              ctx.beginPath();
+              ctx.arc(ex + side * 2.2, ey + 2, 1.2, 0, Math.PI * 2);
+              ctx.fill();
+            }
+
+            if (sadLevel >= 1) {
+              ctx.strokeStyle = '#3b1d0c';
+              ctx.lineWidth = 1.6;
+              ctx.beginPath();
+              const browTilt = sadLevel * 1.1;
+              ctx.moveTo(ex - side * 3.2, ey - 4.5 - browTilt * 0.5);
+              ctx.lineTo(ex + side * 3.2, ey - 4.2 + browTilt);
+              ctx.stroke();
+            }
+          }
+        });
+
+        ctx.restore();
+        ctx.restore();
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      const game = new BeaverGame();
+      game.init();
+    });
+  </script>
+</body>
+</html>
