@@ -21,6 +21,16 @@
       overflow-x: hidden;
     }
 
+    /* スマホ自動調整＆拡大縮小用ラッパー */
+    #app-zoom-shell {
+      transform-origin: top center;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transition: transform 0.12s ease-out;
+    }
+
     /* カスタムスクロールバー */
     ::-webkit-scrollbar {
       width: 6px;
@@ -71,6 +81,19 @@
   </style>
 </head>
 <body class="min-h-screen flex flex-col items-center justify-between bg-gradient-to-b from-emerald-100 via-amber-50 to-orange-100 p-2 sm:p-4">
+
+  <!-- 画面拡大・縮小コントローラー（常時右下に配置） -->
+  <div id="ui-zoom-controls" class="fixed bottom-4 right-3 sm:right-5 z-50 flex items-center gap-1 bg-white/95 backdrop-blur px-2 py-1.5 rounded-2xl shadow-lg border-2 border-amber-300">
+    <button type="button" id="btn-zoom-out" title="画面を縮小" class="w-7 h-7 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-950 font-extrabold text-sm flex items-center justify-center transition">
+      －
+    </button>
+    <button type="button" id="btn-zoom-reset" title="表示倍率をリセット（自動/100%）" class="px-2 h-7 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 font-extrabold text-[11px] flex items-center justify-center transition">
+      <span id="ui-zoom-percent">100%</span>
+    </button>
+    <button type="button" id="btn-zoom-in" title="画面を拡大" class="w-7 h-7 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-950 font-extrabold text-sm flex items-center justify-center transition">
+      ＋
+    </button>
+  </div>
 
   <!-- スタート画面（初回または未登録時に表示する飼い主登録＆アカウントID発行画面） -->
   <div id="start-screen-overlay" class="start-backdrop fixed inset-0 z-40 flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
@@ -326,297 +349,300 @@
     </symbol>
   </svg>
 
-  <!-- メインコンテナ -->
-  <div class="w-full max-w-3xl flex flex-col gap-3">
+  <!-- スマホ自動調整＆拡大縮小シェル -->
+  <div id="app-zoom-shell">
+    <!-- メインコンテナ -->
+    <div class="w-full max-w-3xl flex flex-col gap-3">
 
-    <!-- 上部ステータスバー -->
-    <header class="bg-white/90 backdrop-blur-md rounded-2xl p-3 sm:p-4 shadow-md border-2 border-amber-200">
-      <div class="flex flex-wrap items-center justify-between gap-2">
-        <!-- ビーバー名＆成長段階 -->
-        <div class="flex items-center gap-2.5">
-          <div class="w-11 h-11 rounded-2xl bg-amber-100 border-2 border-amber-400 flex items-center justify-center shadow-inner">
-            <svg class="w-8 h-8"><use href="#ico-beaver"/></svg>
+      <!-- 上部ステータスバー -->
+      <header class="bg-white/90 backdrop-blur-md rounded-2xl p-3 sm:p-4 shadow-md border-2 border-amber-200">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <!-- ビーバー名＆成長段階 -->
+          <div class="flex items-center gap-2.5">
+            <div class="w-11 h-11 rounded-2xl bg-amber-100 border-2 border-amber-400 flex items-center justify-center shadow-inner">
+              <svg class="w-8 h-8"><use href="#ico-beaver"/></svg>
+            </div>
+            <div>
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <h1 id="ui-beaver-name" class="text-lg sm:text-xl font-extrabold text-amber-950 tracking-tight">ぽんた</h1>
+                <button id="btn-edit-name" title="名前を変更" class="p-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-800 text-xs font-bold transition inline-flex items-center gap-1">
+                  <svg class="w-3.5 h-3.5"><use href="#ico-edit"/></svg>
+                  <span>変更</span>
+                </button>
+                <span id="ui-stage-badge" class="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-emerald-500 text-white shadow-sm">
+                  赤ちゃん
+                </span>
+              </div>
+              <p class="text-xs text-amber-700 font-bold mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                <span>飼い主: <strong id="ui-owner-name" class="text-amber-950">あなた</strong></span>
+                <span class="text-amber-300">|</span>
+                <button type="button" id="btn-copy-my-id" title="クリックでアカウントIDをコピー" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-100 hover:bg-amber-200 text-amber-950 font-extrabold transition">
+                  <span>ID: <span id="ui-my-account-id">BV-000000</span></span>
+                  <span class="text-[10px] text-amber-700">[コピー]</span>
+                </button>
+                <button type="button" id="btn-open-transfer-modal" title="引き継ぎコードの確認・再発行・読み込み" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-sky-100 hover:bg-sky-200 text-sky-900 font-extrabold transition">
+                  <span>引継コード: <span id="ui-my-transfer-code">0000</span></span>
+                  <span class="text-[10px] text-sky-700">[引継管理]</span>
+                </button>
+                <span class="text-amber-300">|</span>
+                <span>ダムLv.<span id="ui-dam-level" class="text-sm text-amber-900">1</span> (<span id="ui-dam-progress">0</span>)</span>
+              </p>
+            </div>
+          </div>
+
+          <!-- 所持リソース＆サウンド・設定 -->
+          <div class="flex items-center gap-2 ml-auto">
+            <div class="flex items-center gap-1.5 bg-amber-50 border border-amber-300 px-3 py-1.5 rounded-xl shadow-sm">
+              <svg class="w-5 h-5 shrink-0"><use href="#ico-wood"/></svg>
+              <div>
+                <div class="text-[10px] leading-none text-amber-700 font-bold">流木</div>
+                <div id="ui-wood-count" class="text-sm sm:text-base font-extrabold text-amber-950 leading-tight">6</div>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-1.5 bg-yellow-50 border border-yellow-300 px-3 py-1.5 rounded-xl shadow-sm">
+              <svg class="w-5 h-5 shrink-0"><use href="#ico-acorn"/></svg>
+              <div>
+                <div class="text-[10px] leading-none text-yellow-700 font-bold">ツヤツヤのどんぐり</div>
+                <div id="ui-coin-count" class="text-sm sm:text-base font-extrabold text-yellow-900 leading-tight">35</div>
+              </div>
+            </div>
+
+            <button id="btn-sound-toggle" title="効果音オン/オフ" class="p-2.5 rounded-xl bg-stone-100 hover:bg-stone-200 border border-stone-300 text-stone-700 transition flex items-center justify-center">
+              <svg id="ui-sound-icon" class="w-5 h-5"><use href="#ico-sound-on"/></svg>
+            </button>
+
+            <button id="btn-how-to-play" title="ゲームの遊び方" class="px-3 py-2 rounded-xl bg-amber-100 hover:bg-amber-200 border border-amber-300 text-amber-900 text-xs sm:text-sm font-extrabold transition flex items-center gap-1.5 shadow-sm">
+              <svg class="w-4 h-4"><use href="#ico-book"/></svg>
+              <span class="hidden sm:inline">遊び方</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- まんぷく度・ごきげんメーター -->
+        <div class="grid grid-cols-2 gap-3 mt-3 pt-2.5 border-t border-amber-100">
+          <div>
+            <div class="flex justify-between text-xs font-bold mb-1">
+              <span class="text-orange-800 inline-flex items-center gap-1">
+                <svg class="w-3.5 h-3.5"><use href="#ico-apple"/></svg> まんぷく度
+              </span>
+              <span id="ui-hunger-text" class="text-orange-950">80 / 100</span>
+            </div>
+            <div class="w-full h-3 bg-orange-100 rounded-full overflow-hidden border border-orange-200">
+              <div id="ui-hunger-bar" class="h-full bg-gradient-to-r from-rose-400 via-amber-400 to-emerald-500 rounded-full transition-all duration-300" style="width: 80%;"></div>
+            </div>
           </div>
           <div>
-            <div class="flex items-center gap-1.5 flex-wrap">
-              <h1 id="ui-beaver-name" class="text-lg sm:text-xl font-extrabold text-amber-950 tracking-tight">ぽんた</h1>
-              <button id="btn-edit-name" title="名前を変更" class="p-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-800 text-xs font-bold transition inline-flex items-center gap-1">
-                <svg class="w-3.5 h-3.5"><use href="#ico-edit"/></svg>
-                <span>変更</span>
-              </button>
-              <span id="ui-stage-badge" class="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-emerald-500 text-white shadow-sm">
-                赤ちゃん
+            <div class="flex justify-between text-xs font-bold mb-1">
+              <span class="text-pink-700 inline-flex items-center gap-1">
+                <svg class="w-3.5 h-3.5"><use href="#ico-heart"/></svg> ごきげん
               </span>
+              <span id="ui-mood-text" class="text-pink-950">85 / 100</span>
             </div>
-            <p class="text-xs text-amber-700 font-bold mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
-              <span>飼い主: <strong id="ui-owner-name" class="text-amber-950">あなた</strong></span>
-              <span class="text-amber-300">|</span>
-              <button type="button" id="btn-copy-my-id" title="クリックでアカウントIDをコピー" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-100 hover:bg-amber-200 text-amber-950 font-extrabold transition">
-                <span>ID: <span id="ui-my-account-id">BV-000000</span></span>
-                <span class="text-[10px] text-amber-700">[コピー]</span>
-              </button>
-              <button type="button" id="btn-open-transfer-modal" title="引き継ぎコードの確認・再発行・読み込み" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-sky-100 hover:bg-sky-200 text-sky-900 font-extrabold transition">
-                <span>引継コード: <span id="ui-my-transfer-code">0000</span></span>
-                <span class="text-[10px] text-sky-700">[引継管理]</span>
-              </button>
-              <span class="text-amber-300">|</span>
-              <span>ダムLv.<span id="ui-dam-level" class="text-sm text-amber-900">1</span> (<span id="ui-dam-progress">0</span>)</span>
-            </p>
-          </div>
-        </div>
-
-        <!-- 所持リソース＆サウンド・設定 -->
-        <div class="flex items-center gap-2 ml-auto">
-          <div class="flex items-center gap-1.5 bg-amber-50 border border-amber-300 px-3 py-1.5 rounded-xl shadow-sm">
-            <svg class="w-5 h-5 shrink-0"><use href="#ico-wood"/></svg>
-            <div>
-              <div class="text-[10px] leading-none text-amber-700 font-bold">流木</div>
-              <div id="ui-wood-count" class="text-sm sm:text-base font-extrabold text-amber-950 leading-tight">6</div>
+            <div class="w-full h-3 bg-pink-100 rounded-full overflow-hidden border border-pink-200">
+              <div id="ui-mood-bar" class="h-full bg-gradient-to-r from-pink-400 to-rose-400 rounded-full transition-all duration-300" style="width: 85%;"></div>
+            </div>
+            <div id="ui-mood-bonus-label" class="text-xs sm:text-sm font-normal text-pink-700 mt-1 text-right tracking-normal">
+              ★ ごきげん絶好調：流木2本率UP &amp; 建築効率+6%
             </div>
           </div>
+        </div>
+      </header>
 
-          <div class="flex items-center gap-1.5 bg-yellow-50 border border-yellow-300 px-3 py-1.5 rounded-xl shadow-sm">
-            <svg class="w-5 h-5 shrink-0"><use href="#ico-acorn"/></svg>
-            <div>
-              <div class="text-[10px] leading-none text-yellow-700 font-bold">ツヤツヤのどんぐり</div>
-              <div id="ui-coin-count" class="text-sm sm:text-base font-extrabold text-yellow-900 leading-tight">35</div>
+      <!-- メイン画面：川辺キャンバスエリア -->
+      <main class="relative w-full rounded-3xl overflow-hidden border-4 border-amber-300 bg-sky-200 canvas-frame">
+        <div id="canvas-wrapper" class="w-full h-[270px] sm:h-[340px] relative cursor-pointer">
+          <canvas id="game-canvas" class="block w-full h-full"></canvas>
+
+          <!-- 訪問中バナー -->
+          <div id="visiting-banner" class="hidden absolute top-3 left-3 right-3 bg-indigo-900/85 backdrop-blur text-white px-4 py-2 rounded-2xl flex items-center justify-between shadow-lg border border-indigo-400">
+            <div class="flex items-center gap-2 text-xs sm:text-sm font-bold">
+              <svg class="w-5 h-5 shrink-0"><use href="#ico-canoe"/></svg>
+              <span><strong id="visit-owner-name" class="text-amber-300"></strong> さんの川辺（<span id="visit-beaver-name"></span>）に遊びに来ています！</span>
             </div>
-          </div>
-
-          <button id="btn-sound-toggle" title="効果音オン/オフ" class="p-2.5 rounded-xl bg-stone-100 hover:bg-stone-200 border border-stone-300 text-stone-700 transition flex items-center justify-center">
-            <svg id="ui-sound-icon" class="w-5 h-5"><use href="#ico-sound-on"/></svg>
-          </button>
-
-          <button id="btn-how-to-play" title="ゲームの遊び方" class="px-3 py-2 rounded-xl bg-amber-100 hover:bg-amber-200 border border-amber-300 text-amber-900 text-xs sm:text-sm font-extrabold transition flex items-center gap-1.5 shadow-sm">
-            <svg class="w-4 h-4"><use href="#ico-book"/></svg>
-            <span class="hidden sm:inline">遊び方</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- まんぷく度・ごきげんメーター -->
-      <div class="grid grid-cols-2 gap-3 mt-3 pt-2.5 border-t border-amber-100">
-        <div>
-          <div class="flex justify-between text-xs font-bold mb-1">
-            <span class="text-orange-800 inline-flex items-center gap-1">
-              <svg class="w-3.5 h-3.5"><use href="#ico-apple"/></svg> まんぷく度
-            </span>
-            <span id="ui-hunger-text" class="text-orange-950">80 / 100</span>
-          </div>
-          <div class="w-full h-3 bg-orange-100 rounded-full overflow-hidden border border-orange-200">
-            <div id="ui-hunger-bar" class="h-full bg-gradient-to-r from-rose-400 via-amber-400 to-emerald-500 rounded-full transition-all duration-300" style="width: 80%;"></div>
-          </div>
-        </div>
-        <div>
-          <div class="flex justify-between text-xs font-bold mb-1">
-            <span class="text-pink-700 inline-flex items-center gap-1">
-              <svg class="w-3.5 h-3.5"><use href="#ico-heart"/></svg> ごきげん
-            </span>
-            <span id="ui-mood-text" class="text-pink-950">85 / 100</span>
-          </div>
-          <div class="w-full h-3 bg-pink-100 rounded-full overflow-hidden border border-pink-200">
-            <div id="ui-mood-bar" class="h-full bg-gradient-to-r from-pink-400 to-rose-400 rounded-full transition-all duration-300" style="width: 85%;"></div>
-          </div>
-          <div id="ui-mood-bonus-label" class="text-xs sm:text-sm font-normal text-pink-700 mt-1 text-right tracking-normal">
-            ★ ごきげん絶好調：流木2本率UP &amp; 建築効率+6%
-          </div>
-        </div>
-      </div>
-    </header>
-
-    <!-- メイン画面：川辺キャンバスエリア -->
-    <main class="relative w-full rounded-3xl overflow-hidden border-4 border-amber-300 bg-sky-200 canvas-frame">
-      <div id="canvas-wrapper" class="w-full h-[270px] sm:h-[340px] relative cursor-pointer">
-        <canvas id="game-canvas" class="block w-full h-full"></canvas>
-
-        <!-- 訪問中バナー -->
-        <div id="visiting-banner" class="hidden absolute top-3 left-3 right-3 bg-indigo-900/85 backdrop-blur text-white px-4 py-2 rounded-2xl flex items-center justify-between shadow-lg border border-indigo-400">
-          <div class="flex items-center gap-2 text-xs sm:text-sm font-bold">
-            <svg class="w-5 h-5 shrink-0"><use href="#ico-canoe"/></svg>
-            <span><strong id="visit-owner-name" class="text-amber-300"></strong> さんの川辺（<span id="visit-beaver-name"></span>）に遊びに来ています！</span>
-          </div>
-          <button id="btn-return-home" class="px-3 py-1 bg-amber-400 hover:bg-amber-300 text-amber-950 rounded-xl text-xs font-extrabold shadow transition shrink-0">
-            自宅へ帰る
-          </button>
-        </div>
-
-        <!-- オンライン状態インジケーター＆デバッグ時間経過ボタン -->
-        <div class="absolute bottom-2.5 left-3 right-3 flex items-center justify-between pointer-events-none">
-          <span id="ui-sync-status" class="pointer-events-auto inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/85 backdrop-blur text-[11px] font-bold text-emerald-800 shadow-sm border border-emerald-200">
-            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            ローカル保存済 (Firebase連携対応)
-          </span>
-
-          <div class="pointer-events-auto flex items-center gap-1.5">
-            <span id="ui-game-time-badge" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-sky-900/80 backdrop-blur text-[11px] font-extrabold text-amber-100 shadow-sm border border-white/25">
-              ☀️ 昼（12:00）
-            </span>
-            <button id="btn-sim-time" class="px-2.5 py-1 rounded-full bg-amber-900/80 hover:bg-amber-900 text-amber-100 text-[11px] font-bold shadow-sm backdrop-blur transition" title="時間経過とお留守番中の変化をテストします">
-              ▶▶ 1時間経過テスト
+            <button id="btn-return-home" class="px-3 py-1 bg-amber-400 hover:bg-amber-300 text-amber-950 rounded-xl text-xs font-extrabold shadow transition shrink-0">
+              自宅へ帰る
             </button>
           </div>
-        </div>
-      </div>
-    </main>
 
-    <!-- アクションパネル（自分の川辺用 / 訪問先用で切り替え） -->
-    <section id="panel-home-actions" class="bg-white/95 rounded-2xl p-3 sm:p-4 shadow-md border-2 border-amber-200">
-      <!-- お世話スタミナステータスバー -->
-      <div class="flex flex-wrap items-center justify-between gap-2 mb-2.5 pb-2 border-b border-amber-100">
-        <div class="flex items-center gap-1.5">
-          <span class="text-xs font-extrabold text-amber-950">お世話できる回数:</span>
-          <span id="ui-stamina-count" class="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-emerald-500 text-white shadow-2xs">10 / 10</span>
-        </div>
-        <span id="ui-stamina-timer" class="text-[11px] font-bold text-amber-700">まんたん！（3分ごとに1回回復・上限10回）</span>
-      </div>
+          <!-- オンライン状態インジケーター＆デバッグ時間経過ボタン -->
+          <div class="absolute bottom-2.5 left-3 right-3 flex items-center justify-between pointer-events-none">
+            <span id="ui-sync-status" class="pointer-events-auto inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/85 backdrop-blur text-[11px] font-bold text-emerald-800 shadow-sm border border-emerald-200">
+              <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              ローカル保存済 (Firebase連携対応)
+            </span>
 
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-        <button id="btn-feed-apple" class="btn-game flex flex-col items-center justify-center p-3 rounded-2xl bg-gradient-to-b from-rose-50 to-rose-100 hover:from-rose-100 hover:to-rose-200 border-2 border-rose-300 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
-          <svg class="w-7 h-7 mb-1"><use href="#ico-apple"/></svg>
-          <span class="text-xs sm:text-sm font-extrabold text-rose-950">りんごをあげる</span>
-          <span class="text-[11px] font-bold text-rose-700 mt-0.5 inline-flex items-center gap-1">
-            <svg class="w-3.5 h-3.5"><use href="#ico-acorn"/></svg> -5 / まんぷく+25
-          </span>
-        </button>
-
-        <button id="btn-feed-branch" class="btn-game flex flex-col items-center justify-center p-3 rounded-2xl bg-gradient-to-b from-lime-50 to-lime-100 hover:from-lime-100 hover:to-lime-200 border-2 border-lime-300 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
-          <svg class="w-7 h-7 mb-1"><use href="#ico-branch"/></svg>
-          <span class="text-xs sm:text-sm font-extrabold text-lime-950">若枝をかじる</span>
-          <span class="text-[11px] font-bold text-lime-700 mt-0.5">無料 / まんぷく+12</span>
-        </button>
-
-        <button id="btn-pet" class="btn-game flex flex-col items-center justify-center p-3 rounded-2xl bg-gradient-to-b from-pink-50 to-pink-100 hover:from-pink-100 hover:to-pink-200 border-2 border-pink-300 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
-          <div class="flex items-center gap-0.5 mb-1">
-            <svg class="w-7 h-7"><use href="#ico-pet"/></svg>
-            <svg class="w-5 h-5"><use href="#ico-heart"/></svg>
-          </div>
-          <span class="text-xs sm:text-sm font-extrabold text-pink-950">なでなでする</span>
-          <span class="text-[11px] font-bold text-pink-700 mt-0.5">ごきげん+15（MAX時回数消費なし）</span>
-        </button>
-
-        <button id="btn-gather" class="btn-game flex flex-col items-center justify-center p-3 rounded-2xl bg-gradient-to-b from-amber-50 to-amber-100 hover:from-amber-100 hover:to-amber-200 border-2 border-amber-300 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
-          <svg class="w-7 h-7 mb-1"><use href="#ico-wood"/></svg>
-          <span class="text-xs sm:text-sm font-extrabold text-amber-950">流木を集める</span>
-          <span class="text-[11px] font-bold text-amber-700 mt-0.5 inline-flex items-center gap-1">
-            流木+1〜2 / <svg class="w-3.5 h-3.5"><use href="#ico-acorn"/></svg>+2
-          </span>
-        </button>
-      </div>
-
-      <div class="mt-2.5">
-        <button id="btn-build-dam" class="btn-game w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 hover:from-amber-600 hover:to-orange-600 text-white font-extrabold shadow-md border-b-4 border-amber-700 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
-          <svg class="w-6 h-6"><use href="#ico-dam"/></svg>
-          <span class="text-sm sm:text-base">ダムを建築する（流木 2本消費）</span>
-        </button>
-      </div>
-    </section>
-
-    <!-- お世話＆変化ログ表示窓 -->
-    <section class="bg-white/95 rounded-2xl p-3 sm:p-4 shadow-md border-2 border-amber-200">
-      <div class="flex items-center justify-between mb-2">
-        <h2 class="text-xs sm:text-sm font-extrabold text-amber-950 inline-flex items-center gap-1.5">
-          <svg class="w-4 h-4"><use href="#ico-sparkle"/></svg>
-          <span>川辺の活動・変化ログ</span>
-        </h2>
-        <span class="text-[11px] font-bold text-amber-700">お世話・建築・時間経過を自動記録</span>
-      </div>
-      <div id="activity-log-window" class="max-h-32 overflow-y-auto space-y-1.5 bg-amber-50/70 rounded-xl p-2.5 border border-amber-200 text-xs">
-        <!-- JSで動的生成 -->
-      </div>
-    </section>
-
-    <!-- 訪問先アクションパネル（よその川辺訪問時のみ表示） -->
-    <section id="panel-visit-actions" class="hidden bg-indigo-50/95 rounded-2xl p-3 sm:p-4 shadow-md border-2 border-indigo-200">
-      <div class="grid grid-cols-2 gap-3">
-        <button id="btn-visit-pet" class="btn-game flex flex-col items-center justify-center p-3 rounded-2xl bg-white hover:bg-pink-50 border-2 border-pink-300 shadow-sm">
-          <div class="flex items-center gap-0.5 mb-1">
-            <svg class="w-7 h-7"><use href="#ico-pet"/></svg>
-            <svg class="w-5 h-5"><use href="#ico-heart"/></svg>
-          </div>
-          <span class="text-xs sm:text-sm font-extrabold text-pink-950">よその子をなでる</span>
-          <span class="text-[11px] font-bold text-pink-700 mt-0.5 inline-flex items-center gap-1">
-            お礼に <svg class="w-3.5 h-3.5"><use href="#ico-acorn"/></svg>+3 もらえる
-          </span>
-        </button>
-
-        <button id="btn-visit-gift" class="btn-game flex flex-col items-center justify-center p-3 rounded-2xl bg-white hover:bg-amber-50 border-2 border-amber-300 shadow-sm">
-          <div class="flex items-center gap-1 mb-1">
-            <svg class="w-6 h-6"><use href="#ico-gift"/></svg>
-            <svg class="w-6 h-6"><use href="#ico-wood"/></svg>
-          </div>
-          <span class="text-xs sm:text-sm font-extrabold text-amber-950">流木をおすそわけ</span>
-          <span class="text-[11px] font-bold text-amber-700 mt-0.5 inline-flex items-center gap-1">
-            流木1消費 → <svg class="w-3.5 h-3.5"><use href="#ico-acorn"/></svg>+8
-          </span>
-        </button>
-      </div>
-    </section>
-
-    <!-- オンライン交流＆ゲストブックタブエリア -->
-    <section class="bg-white/95 rounded-2xl p-3 sm:p-4 shadow-md border-2 border-amber-200">
-      <div class="flex items-center justify-between border-b-2 border-amber-100 pb-2 mb-3 gap-2 flex-wrap">
-        <div class="flex gap-1.5 sm:gap-2 flex-wrap">
-          <button id="tab-neighbors" class="px-3 py-1.5 rounded-xl text-xs sm:text-sm font-extrabold bg-amber-500 text-white shadow-sm transition inline-flex items-center gap-1.5">
-            <svg class="w-4 h-4"><use href="#ico-canoe"/></svg>
-            <span>よその川辺</span>
-          </button>
-          <button id="tab-friends" class="px-3 py-1.5 rounded-xl text-xs sm:text-sm font-extrabold bg-amber-100 text-amber-800 hover:bg-amber-200 transition inline-flex items-center gap-1.5">
-            <svg class="w-4 h-4"><use href="#ico-heart"/></svg>
-            <span>お気に入り・ID検索</span>
-            <span id="ui-friends-badge" class="ml-0.5 px-1.5 py-0.2 bg-rose-500 text-white rounded-full text-[10px]">0</span>
-          </button>
-          <button id="tab-guestbook" class="px-3 py-1.5 rounded-xl text-xs sm:text-sm font-extrabold bg-amber-100 text-amber-800 hover:bg-amber-200 transition inline-flex items-center gap-1.5">
-            <svg class="w-4 h-4"><use href="#ico-book"/></svg>
-            <span>訪問ログ</span>
-            <span id="ui-guestbook-badge" class="ml-0.5 px-1.5 py-0.2 bg-rose-500 text-white rounded-full text-[10px]">2</span>
-          </button>
-        </div>
-
-        <button id="btn-reset-save" class="text-[11px] font-bold text-stone-400 hover:text-rose-600 underline transition">
-          データ初期化
-        </button>
-      </div>
-
-      <div id="content-neighbors" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5"></div>
-
-      <div id="content-friends" class="hidden space-y-3">
-        <div class="bg-amber-50/90 border-2 border-amber-200 rounded-2xl p-3">
-          <label for="input-friend-search-id" class="block text-xs font-extrabold text-amber-950 mb-1.5">
-            アカウントIDの数字を入力して検索（例: 204819, 319042, 482710, 591024）
-          </label>
-          <div class="flex gap-2">
-            <div class="flex-1 flex items-center rounded-xl border-2 border-amber-300 focus-within:border-amber-500 bg-white overflow-hidden">
-              <span class="px-3 py-2 bg-amber-100 text-amber-900 font-extrabold text-xs sm:text-sm border-r border-amber-200 select-none shrink-0">
-                BV-
+            <div class="pointer-events-auto flex items-center gap-1.5">
+              <span id="ui-game-time-badge" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-sky-900/80 backdrop-blur text-[11px] font-extrabold text-amber-100 shadow-sm border border-white/25">
+                ☀️ 昼（12:00）
               </span>
-              <input id="input-friend-search-id" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="6桁の半角数字" class="w-full px-3 py-2 focus:outline-none text-xs sm:text-sm font-extrabold text-amber-950 bg-white">
+              <button id="btn-sim-time" class="px-2.5 py-1 rounded-full bg-amber-900/80 hover:bg-amber-900 text-amber-100 text-[11px] font-bold shadow-sm backdrop-blur transition" title="時間経過とお留守番中の変化をテストします">
+                ▶▶ 1時間経過テスト
+              </button>
             </div>
-            <button type="button" id="btn-search-friend-id" class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs sm:text-sm font-extrabold shadow-sm transition shrink-0">
-              検索
+          </div>
+        </div>
+      </main>
+
+      <!-- アクションパネル（自分の川辺用 / 訪問先用で切り替え） -->
+      <section id="panel-home-actions" class="bg-white/95 rounded-2xl p-3 sm:p-4 shadow-md border-2 border-amber-200">
+        <!-- お世話スタミナステータスバー -->
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-2.5 pb-2 border-b border-amber-100">
+          <div class="flex items-center gap-1.5">
+            <span class="text-xs font-extrabold text-amber-950">お世話できる回数:</span>
+            <span id="ui-stamina-count" class="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-emerald-500 text-white shadow-2xs">10 / 10</span>
+          </div>
+          <span id="ui-stamina-timer" class="text-[11px] font-bold text-amber-700">まんたん！（3分ごとに1回回復・上限10回）</span>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+          <button id="btn-feed-apple" class="btn-game flex flex-col items-center justify-center p-3 rounded-2xl bg-gradient-to-b from-rose-50 to-rose-100 hover:from-rose-100 hover:to-rose-200 border-2 border-rose-300 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
+            <svg class="w-7 h-7 mb-1"><use href="#ico-apple"/></svg>
+            <span class="text-xs sm:text-sm font-extrabold text-rose-950">りんごをあげる</span>
+            <span class="text-[11px] font-bold text-rose-700 mt-0.5 inline-flex items-center gap-1">
+              <svg class="w-3.5 h-3.5"><use href="#ico-acorn"/></svg> -5 / まんぷく+25
+            </span>
+          </button>
+
+          <button id="btn-feed-branch" class="btn-game flex flex-col items-center justify-center p-3 rounded-2xl bg-gradient-to-b from-lime-50 to-lime-100 hover:from-lime-100 hover:to-lime-200 border-2 border-lime-300 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
+            <svg class="w-7 h-7 mb-1"><use href="#ico-branch"/></svg>
+            <span class="text-xs sm:text-sm font-extrabold text-lime-950">若枝をかじる</span>
+            <span class="text-[11px] font-bold text-lime-700 mt-0.5">無料 / まんぷく+12</span>
+          </button>
+
+          <button id="btn-pet" class="btn-game flex flex-col items-center justify-center p-3 rounded-2xl bg-gradient-to-b from-pink-50 to-pink-100 hover:from-pink-100 hover:to-pink-200 border-2 border-pink-300 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
+            <div class="flex items-center gap-0.5 mb-1">
+              <svg class="w-7 h-7"><use href="#ico-pet"/></svg>
+              <svg class="w-5 h-5"><use href="#ico-heart"/></svg>
+            </div>
+            <span class="text-xs sm:text-sm font-extrabold text-pink-950">なでなでする</span>
+            <span class="text-[11px] font-bold text-pink-700 mt-0.5">ごきげん+15（MAX時回数消費なし）</span>
+          </button>
+
+          <button id="btn-gather" class="btn-game flex flex-col items-center justify-center p-3 rounded-2xl bg-gradient-to-b from-amber-50 to-amber-100 hover:from-amber-100 hover:to-amber-200 border-2 border-amber-300 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
+            <svg class="w-7 h-7 mb-1"><use href="#ico-wood"/></svg>
+            <span class="text-xs sm:text-sm font-extrabold text-amber-950">流木を集める</span>
+            <span class="text-[11px] font-bold text-amber-700 mt-0.5 inline-flex items-center gap-1">
+              流木+1〜2 / <svg class="w-3.5 h-3.5"><use href="#ico-acorn"/></svg>+2
+            </span>
+          </button>
+        </div>
+
+        <div class="mt-2.5">
+          <button id="btn-build-dam" class="btn-game w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 hover:from-amber-600 hover:to-orange-600 text-white font-extrabold shadow-md border-b-4 border-amber-700 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+            <svg class="w-6 h-6"><use href="#ico-dam"/></svg>
+            <span class="text-sm sm:text-base">ダムを建築する（流木 2本消費）</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- お世話＆変化ログ表示窓 -->
+      <section class="bg-white/95 rounded-2xl p-3 sm:p-4 shadow-md border-2 border-amber-200">
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="text-xs sm:text-sm font-extrabold text-amber-950 inline-flex items-center gap-1.5">
+            <svg class="w-4 h-4"><use href="#ico-sparkle"/></svg>
+            <span>川辺の活動・変化ログ</span>
+          </h2>
+          <span class="text-[11px] font-bold text-amber-700">お世話・建築・時間経過を自動記録</span>
+        </div>
+        <div id="activity-log-window" class="max-h-32 overflow-y-auto space-y-1.5 bg-amber-50/70 rounded-xl p-2.5 border border-amber-200 text-xs">
+          <!-- JSで動的生成 -->
+        </div>
+      </section>
+
+      <!-- 訪問先アクションパネル（よその川辺訪問時のみ表示） -->
+      <section id="panel-visit-actions" class="hidden bg-indigo-50/95 rounded-2xl p-3 sm:p-4 shadow-md border-2 border-indigo-200">
+        <div class="grid grid-cols-2 gap-3">
+          <button id="btn-visit-pet" class="btn-game flex flex-col items-center justify-center p-3 rounded-2xl bg-white hover:bg-pink-50 border-2 border-pink-300 shadow-sm">
+            <div class="flex items-center gap-0.5 mb-1">
+              <svg class="w-7 h-7"><use href="#ico-pet"/></svg>
+              <svg class="w-5 h-5"><use href="#ico-heart"/></svg>
+            </div>
+            <span class="text-xs sm:text-sm font-extrabold text-pink-950">よその子をなでる</span>
+            <span class="text-[11px] font-bold text-pink-700 mt-0.5 inline-flex items-center gap-1">
+              お礼に <svg class="w-3.5 h-3.5"><use href="#ico-acorn"/></svg>+3 もらえる
+            </span>
+          </button>
+
+          <button id="btn-visit-gift" class="btn-game flex flex-col items-center justify-center p-3 rounded-2xl bg-white hover:bg-amber-50 border-2 border-amber-300 shadow-sm">
+            <div class="flex items-center gap-1 mb-1">
+              <svg class="w-6 h-6"><use href="#ico-gift"/></svg>
+              <svg class="w-6 h-6"><use href="#ico-wood"/></svg>
+            </div>
+            <span class="text-xs sm:text-sm font-extrabold text-amber-950">流木をおすそわけ</span>
+            <span class="text-[11px] font-bold text-amber-700 mt-0.5 inline-flex items-center gap-1">
+              流木1消費 → <svg class="w-3.5 h-3.5"><use href="#ico-acorn"/></svg>+8
+            </span>
+          </button>
+        </div>
+      </section>
+
+      <!-- オンライン交流＆ゲストブックタブエリア -->
+      <section class="bg-white/95 rounded-2xl p-3 sm:p-4 shadow-md border-2 border-amber-200">
+        <div class="flex items-center justify-between border-b-2 border-amber-100 pb-2 mb-3 gap-2 flex-wrap">
+          <div class="flex gap-1.5 sm:gap-2 flex-wrap">
+            <button id="tab-neighbors" class="px-3 py-1.5 rounded-xl text-xs sm:text-sm font-extrabold bg-amber-500 text-white shadow-sm transition inline-flex items-center gap-1.5">
+              <svg class="w-4 h-4"><use href="#ico-canoe"/></svg>
+              <span>よその川辺</span>
+            </button>
+            <button id="tab-friends" class="px-3 py-1.5 rounded-xl text-xs sm:text-sm font-extrabold bg-amber-100 text-amber-800 hover:bg-amber-200 transition inline-flex items-center gap-1.5">
+              <svg class="w-4 h-4"><use href="#ico-heart"/></svg>
+              <span>お気に入り・ID検索</span>
+              <span id="ui-friends-badge" class="ml-0.5 px-1.5 py-0.2 bg-rose-500 text-white rounded-full text-[10px]">0</span>
+            </button>
+            <button id="tab-guestbook" class="px-3 py-1.5 rounded-xl text-xs sm:text-sm font-extrabold bg-amber-100 text-amber-800 hover:bg-amber-200 transition inline-flex items-center gap-1.5">
+              <svg class="w-4 h-4"><use href="#ico-book"/></svg>
+              <span>訪問ログ</span>
+              <span id="ui-guestbook-badge" class="ml-0.5 px-1.5 py-0.2 bg-rose-500 text-white rounded-full text-[10px]">2</span>
             </button>
           </div>
-          <div id="friend-search-result" class="mt-2.5"></div>
+
+          <button id="btn-reset-save" class="text-[11px] font-bold text-stone-400 hover:text-rose-600 underline transition">
+            データ初期化
+          </button>
         </div>
 
-        <div class="space-y-2">
-          <div class="flex items-center justify-between gap-2 flex-wrap">
-            <h4 class="text-xs sm:text-sm font-extrabold text-amber-950">お気に入り一覧</h4>
-            <div class="flex items-center gap-1.5 flex-wrap">
-              <span id="ui-favorite-count-label" class="text-[11px] font-bold text-rose-600 mr-1">お気に入り: 0人</span>
-              <button type="button" data-friend-sort="fav_first" class="px-2 py-1 rounded-lg text-[11px] font-extrabold bg-rose-500 text-white shadow-2xs transition">
-                お気に入り順
-              </button>
-              <button type="button" data-friend-sort="dam_desc" class="px-2 py-1 rounded-lg text-[11px] font-extrabold bg-amber-100 hover:bg-amber-200 text-amber-900 transition">
-                ダムLv順
+        <div id="content-neighbors" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5"></div>
+
+        <div id="content-friends" class="hidden space-y-3">
+          <div class="bg-amber-50/90 border-2 border-amber-200 rounded-2xl p-3">
+            <label for="input-friend-search-id" class="block text-xs font-extrabold text-amber-950 mb-1.5">
+              アカウントIDの数字を入力して検索（例: 204819, 319042, 482710, 591024）
+            </label>
+            <div class="flex gap-2">
+              <div class="flex-1 flex items-center rounded-xl border-2 border-amber-300 focus-within:border-amber-500 bg-white overflow-hidden">
+                <span class="px-3 py-2 bg-amber-100 text-amber-900 font-extrabold text-xs sm:text-sm border-r border-amber-200 select-none shrink-0">
+                  BV-
+                </span>
+                <input id="input-friend-search-id" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="6桁の半角数字" class="w-full px-3 py-2 focus:outline-none text-xs sm:text-sm font-extrabold text-amber-950 bg-white">
+              </div>
+              <button type="button" id="btn-search-friend-id" class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs sm:text-sm font-extrabold shadow-sm transition shrink-0">
+                検索
               </button>
             </div>
+            <div id="friend-search-result" class="mt-2.5"></div>
           </div>
-          <div id="friends-list-container" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-60 overflow-y-auto pr-1"></div>
-        </div>
-      </div>
 
-      <div id="content-guestbook" class="hidden max-h-48 overflow-y-auto space-y-2 pr-1"></div>
-    </section>
+          <div class="space-y-2">
+            <div class="flex items-center justify-between gap-2 flex-wrap">
+              <h4 class="text-xs sm:text-sm font-extrabold text-amber-950">お気に入り一覧</h4>
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <span id="ui-favorite-count-label" class="text-[11px] font-bold text-rose-600 mr-1">お気に入り: 0人</span>
+                <button type="button" data-friend-sort="fav_first" class="px-2 py-1 rounded-lg text-[11px] font-extrabold bg-rose-500 text-white shadow-2xs transition">
+                  お気に入り順
+                </button>
+                <button type="button" data-friend-sort="dam_desc" class="px-2 py-1 rounded-lg text-[11px] font-extrabold bg-amber-100 hover:bg-amber-200 text-amber-900 transition">
+                  ダムLv順
+                </button>
+              </div>
+            </div>
+            <div id="friends-list-container" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-60 overflow-y-auto pr-1"></div>
+          </div>
+        </div>
+
+        <div id="content-guestbook" class="hidden max-h-48 overflow-y-auto space-y-2 pr-1"></div>
+      </section>
+    </div>
   </div>
 
   <!-- 引き継ぎコード確認・再発行＆他端末からの読み込みモーダル -->
@@ -772,7 +798,7 @@
   </div>
 
   <!-- 画面下部トースト通知 -->
-  <div id="toast-container" class="fixed bottom-5 inset-x-3 sm:inset-x-6 z-50 pointer-events-none flex flex-col items-center gap-2"></div>
+  <div id="toast-container" class="fixed bottom-16 sm:bottom-5 inset-x-3 sm:inset-x-6 z-50 pointer-events-none flex flex-col items-center gap-2"></div>
 
   <!-- Firebase SDK (v10 モジュール・オンライン保存＆ID重複防止用) -->
   <script type="module">
@@ -987,6 +1013,30 @@
         return fb;
       }
 
+      async ensureOnlineReady() {
+        const fb = this.getFb();
+        if (!fb) return false;
+        if (this.onlineConnected && this.uid) return true;
+        try {
+          if (fb.auth && fb.auth.currentUser && fb.auth.currentUser.uid) {
+            this.uid = fb.auth.currentUser.uid;
+          } else if (fb.auth && typeof fb.signInAnonymously === 'function') {
+            const cred = await fb.signInAnonymously(fb.auth);
+            if (cred && cred.user && cred.user.uid) {
+              this.uid = cred.user.uid;
+            }
+          }
+          if (!this.uid) return false;
+          await fb.getDoc(fb.doc(fb.db, 'players', this.uid));
+          this.onlineConnected = true;
+          this.updateSyncBadge('オンライン同期済 (Firebase)', true);
+          return true;
+        } catch (err) {
+          console.warn('オンライン接続の確認に失敗:', err);
+          return false;
+        }
+      }
+
       updateSyncBadge(statusText, isOnline = false) {
         const el = document.getElementById('ui-sync-status');
         if (!el) return;
@@ -1081,32 +1131,52 @@
         }
 
         const fb = this.getFb();
-        if (!fb || !this.onlineConnected) {
-          return { ok: false, message: '現在オンライン接続（Firebase）が利用できないため、引き継ぎデータを読み込めません。' };
+        if (!fb) {
+          return { ok: false, message: 'Firebaseが初期化されていないため引き継ぎできません。' };
+        }
+
+        const ready = await this.ensureOnlineReady();
+        if (!ready) {
+          return { ok: false, message: 'Firebase通信に接続できませんでした。通信状態やルールをご確認ください。' };
         }
 
         try {
-          const qRef = fb.query(
+          let matchedDoc = null;
+
+          // 1. user.accountId で検索
+          const qByUser = fb.query(
             fb.collection(fb.db, 'players'),
             fb.where('user.accountId', '==', normalizedId)
           );
-          const snap = await fb.getDocs(qRef);
-          if (snap.empty) {
-            return { ok: false, message: `アカウントID「${normalizedId}」のデータが見つかりませんでした。` };
-          }
-
-          let matchedDoc = null;
-          snap.forEach((docSnap) => {
+          const snapByUser = await fb.getDocs(qByUser);
+          snapByUser.forEach((docSnap) => {
             if (matchedDoc) return;
             const raw = docSnap.data() || {};
-            const code = String((raw.user && raw.user.transferCode) || '').trim();
+            const code = String((raw.user && raw.user.transferCode) || raw.transferCode || '').trim();
             if (code === normalizedCode) {
               matchedDoc = { id: docSnap.id, data: raw };
             }
           });
 
+          // 2. publicProfile.accountId でフォールバック検索
           if (!matchedDoc) {
-            return { ok: false, message: '引き継ぎコードが一致しません。コードを確認してください。' };
+            const qByProf = fb.query(
+              fb.collection(fb.db, 'players'),
+              fb.where('publicProfile.accountId', '==', normalizedId)
+            );
+            const snapByProf = await fb.getDocs(qByProf);
+            snapByProf.forEach((docSnap) => {
+              if (matchedDoc) return;
+              const raw = docSnap.data() || {};
+              const code = String((raw.user && raw.user.transferCode) || raw.transferCode || '').trim();
+              if (code === normalizedCode) {
+                matchedDoc = { id: docSnap.id, data: raw };
+              }
+            });
+          }
+
+          if (!matchedDoc) {
+            return { ok: false, message: `「${normalizedId}」と引き継ぎコード「${normalizedCode}」の組み合わせが見つかりません。` };
           }
 
           const restored = this.normalizeLoadedData(matchedDoc.data);
@@ -1116,7 +1186,7 @@
           return { ok: true, data: restored, sourceUid: matchedDoc.id };
         } catch (err) {
           console.error('引き継ぎデータの読み込みに失敗:', err);
-          return { ok: false, message: '引き継ぎデータの読み込み中にエラーが発生しました。' };
+          return { ok: false, message: `読み込みエラー: ${err && err.message ? err.message : '通信に失敗しました'}` };
         }
       }
 
@@ -1429,6 +1499,8 @@
         this.pendingStartTransferCode = null;
         this.searchedNeighbor = null;
         this.friendSortMode = 'fav_first';
+        this.manualZoomScale = null; // null時はスマホ幅に応じて自動調整
+        this.currentZoomScale = 1.0;
         this.colorChoices = [
           { id: 'fox_brown', name: 'きつねブラウン', hex: '#9a5b25' },
           { id: 'cocoa_dark', name: 'ココアダーク', hex: '#5c3317' },
@@ -1526,6 +1598,7 @@
         this.applyElapsedTime(Date.now() - this.state.user.lastUpdatedAt);
         await this.storage.saveGameData(this.state);
 
+        this.applyResponsiveZoom();
         this.setupCanvas();
         this.bindEvents();
         this.syncStartScreenState();
@@ -1548,6 +1621,42 @@
         }, 1000);
 
         requestAnimationFrame(() => this.loop());
+      }
+
+      // スマホ自動画面サイズ調整＆拡大縮小倍率の反映
+      applyResponsiveZoom(stepDelta = 0, resetMode = false) {
+        const vw = window.innerWidth || document.documentElement.clientWidth || 390;
+        const autoScale = vw < 480 ? Math.max(0.76, Math.min(1.0, vw / 430)) : 1.0;
+
+        if (resetMode) {
+          this.manualZoomScale = null;
+        } else if (stepDelta !== 0) {
+          const base = this.manualZoomScale !== null ? this.manualZoomScale : autoScale;
+          this.manualZoomScale = Math.max(0.7, Math.min(1.35, Number((base + stepDelta).toFixed(2))));
+        }
+
+        const scale = this.manualZoomScale !== null ? this.manualZoomScale : autoScale;
+        this.currentZoomScale = scale;
+
+        const shell = document.getElementById('app-zoom-shell');
+        if (shell) {
+          if (Math.abs(scale - 1.0) < 0.005) {
+            shell.style.transform = '';
+            shell.style.width = '100%';
+            shell.style.marginBottom = '';
+          } else {
+            shell.style.transform = `scale(${scale})`;
+            shell.style.width = `${(100 / scale).toFixed(2)}%`;
+            const shellHeight = shell.getBoundingClientRect().height;
+            const extraSpace = shellHeight * (scale - 1);
+            shell.style.marginBottom = `${Math.round(extraSpace)}px`;
+          }
+        }
+
+        const pctEl = document.getElementById('ui-zoom-percent');
+        if (pctEl) {
+          pctEl.textContent = `${Math.round(scale * 100)}%`;
+        }
       }
 
       // 引き継ぎコードによるセーブデータ読み込みの実行
@@ -2507,15 +2616,20 @@
         const resize = () => {
           if (!wrapper || !this.canvas || !this.ctx) return;
           const rect = wrapper.getBoundingClientRect();
+          const scale = this.currentZoomScale || 1;
           const dpr = Math.min(window.devicePixelRatio || 1, 2);
-          this.width = Math.max(240, rect.width || wrapper.clientWidth || 480);
-          this.height = Math.max(180, rect.height || wrapper.clientHeight || 300);
+          this.width = Math.max(240, (rect.width || wrapper.clientWidth || 480) / scale);
+          this.height = Math.max(180, (rect.height || wrapper.clientHeight || 300) / scale);
           this.canvas.width = Math.floor(this.width * dpr);
           this.canvas.height = Math.floor(this.height * dpr);
           this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         };
+        this.resizeCanvas = resize;
         resize();
-        window.addEventListener('resize', resize);
+        window.addEventListener('resize', () => {
+          this.applyResponsiveZoom();
+          resize();
+        });
       }
 
       bindEvents() {
@@ -2523,6 +2637,23 @@
           const el = document.getElementById(id);
           if (el) el.addEventListener(ev, fn);
         };
+
+        on('btn-zoom-out', 'click', () => {
+          this.applyResponsiveZoom(-0.1, false);
+          if (this.resizeCanvas) this.resizeCanvas();
+          this.sound.playPop(340);
+        });
+        on('btn-zoom-in', 'click', () => {
+          this.applyResponsiveZoom(0.1, false);
+          if (this.resizeCanvas) this.resizeCanvas();
+          this.sound.playPop(460);
+        });
+        on('btn-zoom-reset', 'click', () => {
+          this.applyResponsiveZoom(0, true);
+          if (this.resizeCanvas) this.resizeCanvas();
+          this.sound.playPop(400);
+          this.showToast(`表示倍率を自動調整（${Math.round(this.currentZoomScale * 100)}%）に戻しました`);
+        });
 
         on('btn-toggle-start-transfer', 'click', () => {
           const box = document.getElementById('start-transfer-box');
@@ -2769,10 +2900,11 @@
         if (this.canvas) {
           this.canvas.addEventListener('click', (e) => {
             const rect = this.canvas.getBoundingClientRect();
-            const px = e.clientX - rect.left;
-            const py = e.clientY - rect.top;
-            const bx = (this.width || rect.width) * this.beaverAnim.xRatio;
-            const by = (this.height || rect.height) * 0.56 + 12 + this.beaverAnim.yOffset + this.beaverAnim.bobOffset;
+            const scale = this.currentZoomScale || 1;
+            const px = (e.clientX - rect.left) / scale;
+            const py = (e.clientY - rect.top) / scale;
+            const bx = (this.width || rect.width / scale) * this.beaverAnim.xRatio;
+            const by = (this.height || rect.height / scale) * 0.56 + 12 + this.beaverAnim.yOffset + this.beaverAnim.bobOffset;
             const dist = Math.hypot(px - bx, py - by);
 
             if (dist < 48) {
@@ -2787,7 +2919,7 @@
               if (this.beaverAnim.action === 'sleep') {
                 this.wakeBeaverFromDam(false);
               }
-              const ratioX = Math.max(0.22, Math.min(0.72, px / Math.max(1, this.width || rect.width)));
+              const ratioX = Math.max(0.22, Math.min(0.72, px / Math.max(1, this.width || rect.width / scale)));
               this.beaverAnim.targetXRatio = ratioX;
               this.beaverAnim.facing = ratioX >= this.beaverAnim.xRatio ? 1 : -1;
               this.beaverAnim.frontLookTimer = 0;
