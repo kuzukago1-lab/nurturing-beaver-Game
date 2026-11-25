@@ -129,8 +129,8 @@
               </div>
             </div>
             <div>
-              <label for="input-start-transfer-code" class="block text-[11px] font-bold text-sky-900 mb-0.5">引き継ぎコード（4桁数字）</label>
-              <input id="input-start-transfer-code" type="text" inputmode="numeric" maxlength="4" placeholder="例: 4829" class="w-full px-2.5 py-1.5 rounded-xl border border-sky-300 bg-white text-xs font-extrabold text-sky-950 focus:outline-none">
+              <label for="input-start-transfer-code" class="block text-[11px] font-bold text-sky-900 mb-0.5">引き継ぎコード（8桁数字）</label>
+              <input id="input-start-transfer-code" type="text" inputmode="numeric" maxlength="8" placeholder="例: 48291034" class="w-full px-2.5 py-1.5 rounded-xl border border-sky-300 bg-white text-xs font-extrabold text-sky-950 focus:outline-none">
             </div>
           </div>
           <button type="button" id="btn-exec-start-transfer" class="btn-game w-full py-2 px-3 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-extrabold shadow-xs transition">
@@ -142,7 +142,7 @@
       <!-- 自動発行されるアカウントID＆初期引き継ぎコード表示 -->
       <div class="bg-amber-50 border-2 border-amber-200 rounded-2xl p-3 mb-4 space-y-2">
         <div>
-          <div class="flex items-center justify-between">
+          <div class="flex items-center justify-between gap-2">
             <span class="text-[11px] font-extrabold text-amber-800">あなたのアカウントID（フレンド検索用）</span>
             <button type="button" id="btn-regenerate-start-id" class="text-[11px] font-bold text-amber-700 hover:text-amber-950 underline transition">
               IDを変更
@@ -158,7 +158,7 @@
           </div>
         </div>
         <div class="flex items-center justify-between pt-1 border-t border-amber-200/80 text-xs">
-          <span class="font-bold text-amber-800">引き継ぎコード：<strong id="start-preview-code" class="text-amber-950 tracking-widest">0000</strong></span>
+          <span class="font-bold text-amber-800">引き継ぎコード（8桁）：<strong id="start-preview-code" class="text-amber-950 tracking-widest">00000000</strong></span>
           <span class="text-[10px] font-bold text-amber-700">あとから変更もできます</span>
         </div>
       </div>
@@ -376,12 +376,15 @@
               <p class="text-xs text-amber-700 font-bold mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
                 <span>飼い主: <strong id="ui-owner-name" class="text-amber-950">あなた</strong></span>
                 <span class="text-amber-300">|</span>
+                <button type="button" id="btn-toggle-secret-visibility" title="アカウントIDと引き継ぎコードの表示・非表示を切り替え" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-stone-100 hover:bg-stone-200 text-stone-800 font-extrabold transition">
+                  <span id="ui-secret-visibility-label">ID・引継を表示</span>
+                </button>
                 <button type="button" id="btn-copy-my-id" title="クリックでアカウントIDをコピー" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-100 hover:bg-amber-200 text-amber-950 font-extrabold transition">
-                  <span>ID: <span id="ui-my-account-id">BV-000000</span></span>
+                  <span>ID: <span id="ui-my-account-id">●●●●●●</span></span>
                   <span class="text-[10px] text-amber-700">[コピー]</span>
                 </button>
                 <button type="button" id="btn-open-transfer-modal" title="引き継ぎコードの確認・再発行・読み込み" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-sky-100 hover:bg-sky-200 text-sky-900 font-extrabold transition">
-                  <span>引継コード: <span id="ui-my-transfer-code">0000</span></span>
+                  <span>引継コード: <span id="ui-my-transfer-code">●●●●●●●●</span></span>
                   <span class="text-[10px] text-sky-700">[引継管理]</span>
                 </button>
                 <span class="text-amber-300">|</span>
@@ -623,25 +626,28 @@
             <div id="friend-search-result" class="mt-2.5"></div>
           </div>
 
-          <div class="space-y-2">
-            <div class="flex items-center justify-between gap-2 flex-wrap">
-              <h4 class="text-xs sm:text-sm font-extrabold text-amber-950">お気に入り一覧</h4>
-              <div class="flex items-center gap-1.5 flex-wrap">
-                <span id="ui-favorite-count-label" class="text-[11px] font-bold text-rose-600 mr-1">お気に入り: 0人</span>
-                <button type="button" data-friend-sort="fav_first" class="px-2 py-1 rounded-lg text-[11px] font-extrabold bg-rose-500 text-white shadow-2xs transition">
-                  お気に入り順
-                </button>
-                <button type="button" data-friend-sort="dam_desc" class="px-2 py-1 rounded-lg text-[11px] font-extrabold bg-amber-100 hover:bg-amber-200 text-amber-900 transition">
-                  ダムLv順
-                </button>
-              </div>
+          <div class="flex items-center justify-between gap-2 flex-wrap">
+            <span id="ui-favorite-count-label" class="text-xs font-extrabold text-amber-900">お気に入り: 0人</span>
+            <div class="flex items-center gap-1.5">
+              <span class="text-[11px] font-bold text-stone-500">並び順:</span>
+              <button type="button" data-friend-sort="fav_first" class="px-2 py-1 rounded-lg text-[11px] font-extrabold bg-rose-500 text-white shadow-2xs transition">
+                ★お気に入り優先
+              </button>
+              <button type="button" data-friend-sort="dam_desc" class="px-2 py-1 rounded-lg text-[11px] font-extrabold bg-amber-100 hover:bg-amber-200 text-amber-900 transition">
+                ダムLv順
+              </button>
             </div>
-            <div id="friends-list-container" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-60 overflow-y-auto pr-1"></div>
           </div>
+          <div id="friends-list-container" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5"></div>
         </div>
 
-        <div id="content-guestbook" class="hidden max-h-48 overflow-y-auto space-y-2 pr-1"></div>
+        <div id="content-guestbook" class="hidden space-y-2"></div>
       </section>
+
+      <!-- フッター -->
+      <footer class="text-center text-[11px] text-amber-800/75 font-bold py-1">
+        もくもく川辺のビーバー育成記 &copy; 川辺の仲間たち
+      </footer>
     </div>
   </div>
 
@@ -650,22 +656,27 @@
     <div class="bg-white rounded-3xl max-w-md w-full p-5 shadow-2xl border-2 border-sky-300 space-y-4 max-h-[88vh] overflow-y-auto">
       <div class="flex items-center justify-between border-b border-sky-100 pb-2.5">
         <h3 class="text-base sm:text-lg font-extrabold text-amber-950">アカウントID ＆ 引き継ぎコード</h3>
-        <button type="button" id="btn-close-transfer-modal" class="w-8 h-8 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-700 font-extrabold flex items-center justify-center">
-          ✕
-        </button>
+        <div class="flex items-center gap-1.5">
+          <button type="button" id="btn-toggle-modal-secret" class="px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-extrabold transition">
+            表示する
+          </button>
+          <button type="button" id="btn-close-transfer-modal" class="w-8 h-8 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-700 font-extrabold flex items-center justify-center">
+            ✕
+          </button>
+        </div>
       </div>
 
       <!-- 自分の引き継ぎ情報 -->
       <div class="bg-amber-50 border-2 border-amber-200 rounded-2xl p-3.5 space-y-2">
         <div class="text-xs font-extrabold text-amber-900">現在の端末の引き継ぎ情報（他の端末へ送る場合）</div>
-        <div class="grid grid-cols-2 gap-2">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <div class="bg-white rounded-xl p-2 border border-amber-200">
             <div class="text-[10px] font-bold text-amber-700">アカウントID</div>
-            <div id="modal-my-account-id" class="text-sm font-extrabold text-amber-950 tracking-wider">BV-000000</div>
+            <div id="modal-my-account-id" class="text-sm font-extrabold text-amber-950 tracking-wider">BV-●●●●●●</div>
           </div>
           <div class="bg-white rounded-xl p-2 border border-amber-200">
-            <div class="text-[10px] font-bold text-amber-700">引き継ぎコード（4桁）</div>
-            <div id="modal-my-transfer-code" class="text-sm font-extrabold text-sky-900 tracking-widest">0000</div>
+            <div class="text-[10px] font-bold text-amber-700">引き継ぎコード（8桁）</div>
+            <div id="modal-my-transfer-code" class="text-sm font-extrabold text-sky-900 tracking-widest">●●●●●●●●</div>
           </div>
         </div>
         <div class="flex gap-2 pt-1">
@@ -682,7 +693,7 @@
       <div class="bg-sky-50 border-2 border-sky-200 rounded-2xl p-3.5 space-y-2.5">
         <div class="text-xs font-extrabold text-sky-950">別の端末・アカウントからデータを読み込む</div>
         <p class="text-[11px] text-sky-800 leading-relaxed">
-          読み込み元のアカウントID（6桁数字）と引き継ぎコード（4桁数字）を入力すると、クラウド上のセーブデータをこの端末へ読み込みます。
+          読み込み元のアカウントID（6桁数字）と引き継ぎコード（8桁数字）を入力すると、クラウド上のセーブデータをこの端末へ読み込みます（同一アカウントの二重ログイン中は読み込みできません）。
         </p>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <div>
@@ -693,8 +704,8 @@
             </div>
           </div>
           <div>
-            <label for="input-modal-transfer-code" class="block text-[11px] font-bold text-sky-900 mb-0.5">引き継ぎコード（4桁）</label>
-            <input id="input-modal-transfer-code" type="text" inputmode="numeric" maxlength="4" placeholder="1234" class="w-full px-2.5 py-1.5 rounded-xl border border-sky-300 bg-white text-xs font-extrabold text-sky-950 focus:outline-none">
+            <label for="input-modal-transfer-code" class="block text-[11px] font-bold text-sky-900 mb-0.5">引き継ぎコード（8桁）</label>
+            <input id="input-modal-transfer-code" type="text" inputmode="numeric" maxlength="8" placeholder="12345678" class="w-full px-2.5 py-1.5 rounded-xl border border-sky-300 bg-white text-xs font-extrabold text-sky-950 focus:outline-none">
           </div>
         </div>
         <button type="button" id="btn-exec-modal-transfer" class="btn-game w-full py-2.5 px-4 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs sm:text-sm font-extrabold shadow transition">
@@ -909,7 +920,6 @@
         osc.stop(now + 0.14);
       }
 
-      // 花火の打ち上げ＆炸裂音
       playFireworkBurst() {
         if (this.muted) return;
         this.init();
@@ -998,6 +1008,8 @@
       constructor(storageKey = 'beaver_ranch_save_v1') {
         this.storageKey = storageKey;
         this.uid = null;
+        this.sessionToken = `sess_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+        this.activeSessionLockId = null;
         this.onlineConnected = false;
       }
 
@@ -1063,7 +1075,7 @@
           },
           beaver: {
             name: 'ぽんた',
-            hunger: 20,      // 内部は空腹減り度（0=満腹〜100=ペコペコ）、UIでは満腹度（100 - hunger）として表示
+            hunger: 20,
             mood: 85,
             damLevel: 1,
             damProgress: 20,
@@ -1116,18 +1128,128 @@
       }
 
       generateTransferCode() {
-        return String(Math.floor(1000 + Math.random() * 9000));
+        let code = '';
+        for (let i = 0; i < 8; i++) {
+          code += String(Math.floor(Math.random() * 10));
+        }
+        return code;
       }
 
-      // アカウントID＆引き継ぎコードでFirestoreからセーブデータを検索・検証して取得する
+      async checkAccountSessionLock(accountId, ignoreCurrentLock = false) {
+        const normalizedId = String(accountId || '').trim().toUpperCase();
+        if (!/^BV-\d{6}$/.test(normalizedId)) {
+          return { lockedByOther: false };
+        }
+        const fb = this.getFb();
+        if (!fb || !this.onlineConnected) {
+          return { lockedByOther: false };
+        }
+        try {
+          const lockRef = fb.doc(fb.db, 'session_locks', normalizedId);
+          const snap = await fb.getDoc(lockRef);
+          if (!snap.exists()) {
+            return { lockedByOther: false };
+          }
+          const lockData = snap.data() || {};
+          const ownerSession = lockData.sessionToken;
+          const lastHeartbeat = Number(lockData.lastHeartbeatMs || 0);
+          const isFresh = (Date.now() - lastHeartbeat) < 90000;
+          if (ignoreCurrentLock && this.activeSessionLockId === normalizedId) {
+            return { lockedByOther: false };
+          }
+          if (isFresh && ownerSession && ownerSession !== this.sessionToken) {
+            return {
+              lockedByOther: true,
+              message: `アカウントID「${normalizedId}」は別の端末・画面でログイン中のため二重ログインできません。`
+            };
+          }
+          return { lockedByOther: false };
+        } catch (err) {
+          console.warn('セッションロック確認に失敗:', err);
+          return { lockedByOther: false };
+        }
+      }
+
+      async acquireOrRenewSessionLock(accountId) {
+        const normalizedId = String(accountId || '').trim().toUpperCase();
+        if (!/^BV-\d{6}$/.test(normalizedId)) {
+          return { ok: true };
+        }
+        const fb = this.getFb();
+        if (!fb || !this.onlineConnected) {
+          this.activeSessionLockId = normalizedId;
+          return { ok: true };
+        }
+
+        try {
+          await fb.runTransaction(fb.db, async (transaction) => {
+            const lockRef = fb.doc(fb.db, 'session_locks', normalizedId);
+            const snap = await transaction.get(lockRef);
+            const nowMs = Date.now();
+            if (snap.exists()) {
+              const cur = snap.data() || {};
+              const isFresh = (nowMs - Number(cur.lastHeartbeatMs || 0)) < 90000;
+              if (isFresh && cur.sessionToken && cur.sessionToken !== this.sessionToken) {
+                throw new Error(`アカウントID「${normalizedId}」は別の端末でログイン中のため二重ログインできません。`);
+              }
+            }
+            transaction.set(lockRef, {
+              accountId: normalizedId,
+              sessionToken: this.sessionToken,
+              uid: this.uid || 'local_player_001',
+              lastHeartbeatMs: nowMs,
+              updatedAt: fb.serverTimestamp()
+            }, { merge: true });
+          });
+
+          if (this.activeSessionLockId && this.activeSessionLockId !== normalizedId) {
+            await this.releaseSessionLock(this.activeSessionLockId);
+          }
+          this.activeSessionLockId = normalizedId;
+          return { ok: true };
+        } catch (err) {
+          const msg = err && err.message ? err.message : 'このアカウントは現在ほかの端末で利用中です。';
+          return { ok: false, message: msg };
+        }
+      }
+
+      async releaseSessionLock(accountId = null) {
+        const targetId = String(accountId || this.activeSessionLockId || '').trim().toUpperCase();
+        if (!/^BV-\d{6}$/.test(targetId)) return;
+        const fb = this.getFb();
+        if (!fb || !this.onlineConnected) {
+          if (this.activeSessionLockId === targetId) this.activeSessionLockId = null;
+          return;
+        }
+        try {
+          const lockRef = fb.doc(fb.db, 'session_locks', targetId);
+          await fb.runTransaction(fb.db, async (transaction) => {
+            const snap = await transaction.get(lockRef);
+            if (snap.exists() && snap.data().sessionToken === this.sessionToken) {
+              transaction.set(lockRef, {
+                sessionToken: null,
+                lastHeartbeatMs: 0,
+                updatedAt: fb.serverTimestamp()
+              }, { merge: true });
+            }
+          });
+        } catch (err) {
+          console.warn('セッションロック解除に失敗:', err);
+        } finally {
+          if (this.activeSessionLockId === targetId) {
+            this.activeSessionLockId = null;
+          }
+        }
+      }
+
       async fetchSaveByTransferCode(accountId, transferCode) {
         const normalizedId = String(accountId || '').trim().toUpperCase();
         const normalizedCode = String(transferCode || '').trim();
         if (!/^BV-\d{6}$/.test(normalizedId)) {
           return { ok: false, message: 'アカウントIDは6桁の数字で入力してください。' };
         }
-        if (!/^\d{4}$/.test(normalizedCode)) {
-          return { ok: false, message: '引き継ぎコードは4桁の半角数字で入力してください。' };
+        if (!/^\d{8}$/.test(normalizedCode)) {
+          return { ok: false, message: '引き継ぎコードは8桁の半角数字で入力してください。' };
         }
 
         const fb = this.getFb();
@@ -1140,10 +1262,14 @@
           return { ok: false, message: 'Firebase通信に接続できませんでした。通信状態やルールをご確認ください。' };
         }
 
+        const lockCheck = await this.checkAccountSessionLock(normalizedId, false);
+        if (lockCheck.lockedByOther) {
+          return { ok: false, message: lockCheck.message };
+        }
+
         try {
           let matchedDoc = null;
 
-          // 1. user.accountId で検索
           const qByUser = fb.query(
             fb.collection(fb.db, 'players'),
             fb.where('user.accountId', '==', normalizedId)
@@ -1158,7 +1284,6 @@
             }
           });
 
-          // 2. publicProfile.accountId でフォールバック検索
           if (!matchedDoc) {
             const qByProf = fb.query(
               fb.collection(fb.db, 'players'),
@@ -1190,7 +1315,6 @@
         }
       }
 
-      // FirestoreトランザクションでアカウントIDの重複を防ぎつつ確定する
       async reserveUniqueAccountId(preferredId = null, uid = null) {
         const activeUid = uid || this.uid || 'local_player_001';
         const fb = this.getFb();
@@ -1200,10 +1324,21 @@
 
         try {
           const reservedId = await fb.runTransaction(fb.db, async (transaction) => {
+            if (preferredId && /^BV-\d{6}$/.test(preferredId)) {
+              const prefRef = fb.doc(fb.db, 'account_registry', preferredId);
+              const prefSnap = await transaction.get(prefRef);
+              if (!prefSnap.exists() || prefSnap.data().uid === activeUid) {
+                transaction.set(prefRef, {
+                  uid: activeUid,
+                  accountId: preferredId,
+                  updatedAt: fb.serverTimestamp()
+                }, { merge: true });
+                return preferredId;
+              }
+            }
+
             for (let attempt = 0; attempt < 15; attempt++) {
-              const candidate = (attempt === 0 && preferredId && /^BV-\d{6}$/.test(preferredId))
-                ? preferredId
-                : this.generateAccountId();
+              const candidate = this.generateAccountId();
               const regRef = fb.doc(fb.db, 'account_registry', candidate);
               const snap = await transaction.get(regRef);
               if (!snap.exists() || snap.data().uid === activeUid) {
@@ -1231,7 +1366,7 @@
           ...def.user,
           ...(safeParsed.user || {})
         };
-        if (!/^\d{4}$/.test(String(mergedUser.transferCode || ''))) {
+        if (!/^\d{8}$/.test(String(mergedUser.transferCode || ''))) {
           mergedUser.transferCode = this.generateTransferCode();
         }
         return {
@@ -1499,7 +1634,8 @@
         this.pendingStartTransferCode = null;
         this.searchedNeighbor = null;
         this.friendSortMode = 'fav_first';
-        this.manualZoomScale = null; // null時はスマホ幅に応じて自動調整
+        this.secretsVisible = false;
+        this.manualZoomScale = null;
         this.currentZoomScale = 1.0;
         this.colorChoices = [
           { id: 'fox_brown', name: 'きつねブラウン', hex: '#9a5b25' },
@@ -1574,8 +1710,8 @@
         this.fireworkSparks = [];
         this.fireworkEndTime = 0;
         this.nextFireworkLaunchAt = 0;
-        this.STAMINA_REGEN_MS = 3 * 60 * 1000; // 3分ごとに1回回復（最大10回）
-        this.GAME_HOUR_MS = 2 * 60 * 1000; // 実時間2分でゲーム内1時間進行
+        this.STAMINA_REGEN_MS = 3 * 60 * 1000;
+        this.GAME_HOUR_MS = 2 * 60 * 1000;
       }
 
       async init() {
@@ -1583,6 +1719,7 @@
         this.neighbors = await this.storage.fetchNeighbors();
         this.pendingStartAccountId = this.state.user.accountId;
         this.pendingStartTransferCode = this.state.user.transferCode || this.storage.generateTransferCode();
+        this.secretsVisible = false;
         const savedBody = this.state.beaver.bodyStyle || {};
         this.pendingBeaverCustom = {
           color: this.state.beaver.color || '#9a5b25',
@@ -1596,6 +1733,12 @@
         this.updateStaminaRegen(Date.now(), false);
         this.advanceGameClockByRealElapsed(Date.now() - this.state.user.lastUpdatedAt, false);
         this.applyElapsedTime(Date.now() - this.state.user.lastUpdatedAt);
+        if (this.state.registered && this.state.user.accountId) {
+          const lockRes = await this.storage.acquireOrRenewSessionLock(this.state.user.accountId);
+          if (!lockRes.ok) {
+            this.showToast(lockRes.message);
+          }
+        }
         await this.storage.saveGameData(this.state);
 
         this.applyResponsiveZoom();
@@ -1608,7 +1751,7 @@
         this.renderFriendsTab();
         this.renderGuestbook();
 
-        setInterval(() => {
+        setInterval(async () => {
           const recovered = this.updateStaminaRegen(Date.now(), true);
           const clockChanged = this.advanceGameClockByRealElapsed(1000, true);
           if (recovered || clockChanged) {
@@ -1620,55 +1763,99 @@
           this.updateStaminaUI();
         }, 1000);
 
+        setInterval(async () => {
+          if (this.state && this.state.registered && this.state.user && this.state.user.accountId) {
+            const renewRes = await this.storage.acquireOrRenewSessionLock(this.state.user.accountId);
+            if (!renewRes.ok) {
+              this.showToast(renewRes.message);
+            }
+          }
+        }, 25000);
+
+        window.addEventListener('beforeunload', () => {
+          this.storage.releaseSessionLock();
+        });
+
         requestAnimationFrame(() => this.loop());
       }
 
-      // スマホ自動画面サイズ調整＆拡大縮小倍率の反映
-      applyResponsiveZoom(stepDelta = 0, resetMode = false) {
-        const vw = window.innerWidth || document.documentElement.clientWidth || 390;
-        const autoScale = vw < 480 ? Math.max(0.76, Math.min(1.0, vw / 430)) : 1.0;
-
-        if (resetMode) {
+      applyResponsiveZoom(delta = 0, resetAuto = false) {
+        if (resetAuto) {
           this.manualZoomScale = null;
-        } else if (stepDelta !== 0) {
-          const base = this.manualZoomScale !== null ? this.manualZoomScale : autoScale;
-          this.manualZoomScale = Math.max(0.7, Math.min(1.35, Number((base + stepDelta).toFixed(2))));
+        } else if (delta !== 0) {
+          const base = this.manualZoomScale !== null ? this.manualZoomScale : this.currentZoomScale || 1;
+          this.manualZoomScale = Math.max(0.75, Math.min(1.3, Number((base + delta).toFixed(2))));
         }
 
-        const scale = this.manualZoomScale !== null ? this.manualZoomScale : autoScale;
-        this.currentZoomScale = scale;
+        let targetScale = 1.0;
+        if (this.manualZoomScale !== null) {
+          targetScale = this.manualZoomScale;
+        } else {
+          const vw = window.innerWidth || document.documentElement.clientWidth || 390;
+          if (vw < 430) {
+            targetScale = 0.92;
+          } else if (vw < 640) {
+            targetScale = 0.96;
+          } else {
+            targetScale = 1.0;
+          }
+        }
 
+        this.currentZoomScale = targetScale;
         const shell = document.getElementById('app-zoom-shell');
         if (shell) {
-          if (Math.abs(scale - 1.0) < 0.005) {
+          if (Math.abs(targetScale - 1.0) < 0.005) {
             shell.style.transform = '';
             shell.style.width = '100%';
-            shell.style.marginBottom = '';
           } else {
-            shell.style.transform = `scale(${scale})`;
-            shell.style.width = `${(100 / scale).toFixed(2)}%`;
-            const shellHeight = shell.getBoundingClientRect().height;
-            const extraSpace = shellHeight * (scale - 1);
-            shell.style.marginBottom = `${Math.round(extraSpace)}px`;
+            shell.style.transform = `scale(${targetScale})`;
+            shell.style.width = `${(100 / targetScale).toFixed(2)}%`;
           }
         }
 
         const pctEl = document.getElementById('ui-zoom-percent');
         if (pctEl) {
-          pctEl.textContent = `${Math.round(scale * 100)}%`;
+          pctEl.textContent = `${Math.round(targetScale * 100)}%`;
         }
       }
 
-      // 引き継ぎコードによるセーブデータ読み込みの実行
+      formatSecretId(accountId, forceVisible = false) {
+        if (forceVisible || this.secretsVisible) return accountId || 'BV-000000';
+        return 'BV-●●●●●●';
+      }
+
+      formatSecretCode(transferCode, forceVisible = false) {
+        const code = String(transferCode || '00000000');
+        if (forceVisible || this.secretsVisible) return code;
+        return '●'.repeat(Math.max(8, code.length));
+      }
+
+      toggleSecretVisibility() {
+        this.secretsVisible = !this.secretsVisible;
+        this.sound.playPop(this.secretsVisible ? 460 : 340);
+        this.updateUI();
+        const modal = document.getElementById('transfer-modal-overlay');
+        if (modal && !modal.classList.contains('hidden')) {
+          const idEl = document.getElementById('modal-my-account-id');
+          const codeEl = document.getElementById('modal-my-transfer-code');
+          if (idEl) idEl.textContent = this.formatSecretId(this.state.user.accountId);
+          if (codeEl) codeEl.textContent = this.formatSecretCode(this.state.user.transferCode);
+        }
+        const toggleBtn = document.getElementById('btn-toggle-modal-secret');
+        if (toggleBtn) {
+          toggleBtn.textContent = this.secretsVisible ? '非表示にする' : '表示する';
+        }
+      }
+
       async performTransferLoad(rawIdDigits, rawCode) {
         const digits = String(rawIdDigits || '').replace(/[^0-9]/g, '').slice(0, 6);
-        const code = String(rawCode || '').replace(/[^0-9]/g, '').slice(0, 4);
+        const code = String(rawCode || '').replace(/[^0-9]/g, '').slice(0, 8);
         if (digits.length !== 6) {
           this.showToast('アカウントIDは6桁の数字で入力してください');
           return;
         }
-        if (code.length !== 4) {
-          this.showToast('引き継ぎコードは4桁の数字で入力してください');
+        if (code.length !== 8) {
+          this.showToast('引き継ぎコードは8桁の数字で入力してください');
           return;
         }
 
@@ -1680,16 +1867,23 @@
           return;
         }
 
+        const lockResult = await this.storage.acquireOrRenewSessionLock(fullId);
+        if (!lockResult.ok) {
+          this.showToast(lockResult.message || 'このアカウントは現在別の端末でログイン中です');
+          return;
+        }
+
         const currentUid = this.storage.uid || this.state.user.uid;
         const imported = this.storage.normalizeLoadedData(res.data);
         imported.registered = true;
         imported.user.uid = currentUid;
-        imported.user.accountId = await this.storage.reserveUniqueAccountId(imported.user.accountId, currentUid);
+        imported.user.accountId = fullId;
+        imported.user.transferCode = code;
 
         this.state = imported;
         this.visitingTarget = null;
-        this.pendingStartAccountId = this.state.user.accountId;
-        this.pendingStartTransferCode = this.state.user.transferCode;
+        this.pendingStartAccountId = fullId;
+        this.pendingStartTransferCode = code;
         this.pendingBeaverCustom = {
           color: this.state.beaver.color,
           headSize: this.state.beaver.bodyStyle.headSize,
@@ -1699,7 +1893,7 @@
         };
 
         this.syncMaxStamina(false);
-        this.addActivityLog(`引き継ぎコードで「${this.state.beaver.name}（${this.state.user.accountId}）」のデータを読み込みました！`, '#ico-sparkle');
+        this.addActivityLog(`引き継ぎコードで「${this.state.beaver.name}（ID: ${fullId}）」のデータを読み込みました！`, '#ico-sparkle');
         await this.storage.saveGameData(this.state);
         this.neighbors = await this.storage.fetchNeighbors();
 
@@ -1713,7 +1907,7 @@
         this.renderFriendsTab();
         this.renderGuestbook();
         this.sound.playChime();
-        this.showToast(`「${this.state.beaver.name}」のデータを読み込みました！`);
+        this.showToast(`「${this.state.beaver.name}（${fullId}）」のデータを読み込みました！`);
       }
 
       openTransferModal() {
@@ -1721,8 +1915,10 @@
         if (!modal) return;
         const idEl = document.getElementById('modal-my-account-id');
         const codeEl = document.getElementById('modal-my-transfer-code');
-        if (idEl) idEl.textContent = this.state.user.accountId;
-        if (codeEl) codeEl.textContent = this.state.user.transferCode || '0000';
+        const toggleBtn = document.getElementById('btn-toggle-modal-secret');
+        if (idEl) idEl.textContent = this.formatSecretId(this.state.user.accountId);
+        if (codeEl) codeEl.textContent = this.formatSecretCode(this.state.user.transferCode || '00000000');
+        if (toggleBtn) toggleBtn.textContent = this.secretsVisible ? '非表示にする' : '表示する';
         const inId = document.getElementById('input-modal-transfer-id');
         const inCode = document.getElementById('input-modal-transfer-code');
         if (inId) inId.value = '';
@@ -1731,7 +1927,6 @@
         this.sound.playPop(420);
       }
 
-      // ごきげん度に応じたボーナス倍率・説明取得
       getMoodBonus(mood = this.state.beaver.mood) {
         if (mood >= 80) {
           return {
@@ -1769,7 +1964,6 @@
         };
       }
 
-      // 活動・変化ログを追記（最大40件保持）
       addActivityLog(text, icon = '#ico-sparkle', customTimestamp = Date.now()) {
         if (!Array.isArray(this.state.activityLogs)) {
           this.state.activityLogs = [];
@@ -1786,7 +1980,6 @@
         this.renderActivityLogs();
       }
 
-      // 活動・変化ログ窓の描画
       renderActivityLogs() {
         const container = document.getElementById('activity-log-window');
         if (!container) return;
@@ -1814,13 +2007,11 @@
         });
       }
 
-      // ダムレベルに応じたお世話回数上限（Lv.1は10回、レベルが1上がるごとに+4回）
       getMaxStamina(level = this.state ? this.state.beaver.damLevel : 1) {
         const safeLv = Math.max(1, Math.floor(Number(level) || 1));
         return 10 + (safeLv - 1) * 4;
       }
 
-      // お世話回数上限を現在のダムレベルに同期（レベルアップ時はMAXまで全回復）
       syncMaxStamina(refillToMax = true) {
         if (!this.state || !this.state.stamina) return 0;
         const st = this.state.stamina;
@@ -1936,11 +2127,11 @@
         if (!overlay) return;
         const previewIdEl = document.getElementById('start-preview-id');
         if (previewIdEl) {
-          previewIdEl.textContent = this.pendingStartAccountId || this.state.user.accountId;
+          previewIdEl.textContent = this.formatSecretId(this.pendingStartAccountId || this.state.user.accountId, true);
         }
         const previewCodeEl = document.getElementById('start-preview-code');
         if (previewCodeEl) {
-          previewCodeEl.textContent = this.pendingStartTransferCode || this.state.user.transferCode || '0000';
+          previewCodeEl.textContent = this.formatSecretCode(this.pendingStartTransferCode || this.state.user.transferCode || '00000000', true);
         }
         const ownerInput = document.getElementById('input-start-owner');
         const beaverInput = document.getElementById('input-start-beaver');
@@ -2021,13 +2212,11 @@
         this.addActivityLog(parts.join(' / '), autoProgress > 0 ? '#ico-dam' : '#ico-beaver');
       }
 
-      // レベルごとの必要レベルポイント（Lv.1は100pt、以降レベルが1上がるごとに1.5倍）
       getRequiredDamPoints(level = 1) {
         const safeLv = Math.max(1, Math.floor(Number(level) || 1));
         return Math.round(100 * Math.pow(1.5, safeLv - 1));
       }
 
-      // ゲーム内時刻（0〜23時）から時間帯（朝・昼・夕方・夜）を取得（1時間ごとに循環）
       getTimeOfDayInfo(hour = (this.state && this.state.gameClock && this.state.gameClock.hour) || 12) {
         const h = ((Math.floor(Number(hour)) % 24) + 24) % 24;
         const cycleIdx = h % 4;
@@ -2452,7 +2641,6 @@
         }
       }
 
-      // 朝・昼モード時にダムの上へ移動し、登りきって目を閉じてから最低30秒〜最長3分眠る
       startDamNap(durationFrames = 480) {
         const tod = this.getTimeOfDayInfo(this.state && this.state.gameClock ? this.state.gameClock.hour : 12);
         if (tod.period !== 'morning' && tod.period !== 'day') return false;
@@ -2467,7 +2655,6 @@
         return true;
       }
 
-      // ダム上のお昼寝から目覚めて川面へ戻る
       wakeBeaverFromDam(keepPosition = false) {
         if (this.beaverAnim.action !== 'sleep') return;
         this.beaverAnim.action = 'idle';
@@ -2672,7 +2859,7 @@
         const startTrCode = document.getElementById('input-start-transfer-code');
         if (startTrCode) {
           startTrCode.addEventListener('input', (e) => {
-            const digits = e.target.value.replace(/[^0-9]/g, '').slice(0, 4);
+            const digits = e.target.value.replace(/[^0-9]/g, '').slice(0, 8);
             if (e.target.value !== digits) e.target.value = digits;
           });
         }
@@ -2683,6 +2870,9 @@
           await this.performTransferLoad(idVal, codeVal);
         });
 
+        on('btn-toggle-secret-visibility', 'click', () => this.toggleSecretVisibility());
+        on('btn-toggle-modal-secret', 'click', () => this.toggleSecretVisibility());
+
         on('btn-open-transfer-modal', 'click', () => this.openTransferModal());
         on('btn-close-transfer-modal', 'click', () => {
           const modal = document.getElementById('transfer-modal-overlay');
@@ -2690,7 +2880,7 @@
         });
 
         on('btn-copy-transfer-pair', 'click', () => {
-          const code = this.state.user.transferCode || '0000';
+          const code = this.state.user.transferCode || '00000000';
           const pairText = `アカウントID: ${this.state.user.accountId} / 引き継ぎコード: ${code}`;
           this.copyToClipboard(pairText, 'アカウントIDと引き継ぎコードをコピーしました');
         });
@@ -2700,12 +2890,12 @@
           this.state.user.transferCode = newCode;
           this.pendingStartTransferCode = newCode;
           const codeEl = document.getElementById('modal-my-transfer-code');
-          if (codeEl) codeEl.textContent = newCode;
-          this.addActivityLog(`引き継ぎコードを「${newCode}」に再発行しました`, '#ico-edit');
+          if (codeEl) codeEl.textContent = this.formatSecretCode(newCode);
+          this.addActivityLog(`引き継ぎコード（8桁）を再発行しました`, '#ico-edit');
           await this.storage.saveGameData(this.state);
           this.updateUI();
           this.sound.playPop(460);
-          this.showToast(`新しい引き継ぎコード「${newCode}」を発行しました`);
+          this.showToast(`新しい8桁の引き継ぎコードを発行しました`);
         });
 
         const modalTrId = document.getElementById('input-modal-transfer-id');
@@ -2718,7 +2908,7 @@
         const modalTrCode = document.getElementById('input-modal-transfer-code');
         if (modalTrCode) {
           modalTrCode.addEventListener('input', (e) => {
-            const digits = e.target.value.replace(/[^0-9]/g, '').slice(0, 4);
+            const digits = e.target.value.replace(/[^0-9]/g, '').slice(0, 8);
             if (e.target.value !== digits) e.target.value = digits;
           });
         }
@@ -2756,8 +2946,14 @@
             }
             this.state.user.ownerName = ownerVal.slice(0, 12);
             const desiredId = this.pendingStartAccountId || this.state.user.accountId;
+            const lockCheck = await this.storage.checkAccountSessionLock(desiredId, false);
+            if (lockCheck.lockedByOther) {
+              this.showToast(lockCheck.message);
+              return;
+            }
             this.state.user.accountId = await this.storage.reserveUniqueAccountId(desiredId, this.state.user.uid);
             this.state.user.transferCode = this.pendingStartTransferCode || this.state.user.transferCode || this.storage.generateTransferCode();
+            await this.storage.acquireOrRenewSessionLock(this.state.user.accountId);
             this.pendingStartAccountId = this.state.user.accountId;
             this.pendingStartTransferCode = this.state.user.transferCode;
             this.state.beaver.name = beaverVal.slice(0, 12);
@@ -2769,7 +2965,7 @@
               tailSize: this.pendingBeaverCustom.tailSize
             };
             this.state.registered = true;
-            this.addActivityLog(`${this.state.user.ownerName}さんと ${this.state.beaver.name}（ID: ${this.state.user.accountId} / 引継コード: ${this.state.user.transferCode}）が川辺デビューしました！`, '#ico-beaver');
+            this.addActivityLog(`${this.state.user.ownerName}さんと ${this.state.beaver.name}（ID: ${this.state.user.accountId}）が川辺デビューしました！`, '#ico-beaver');
             this.sound.playChime();
             await this.storage.saveGameData(this.state);
             this.syncStartScreenState();
@@ -2848,6 +3044,7 @@
             desc: 'これまでの成長記録やアイテムがすべてリセットされ、スタート登録画面に戻ります。よろしいですか？',
             showInput: false,
             onConfirm: async () => {
+              await this.storage.releaseSessionLock();
               this.state = await this.storage.resetGameData();
               this.pendingStartAccountId = this.state.user.accountId;
               this.pendingStartTransferCode = this.state.user.transferCode;
@@ -2935,7 +3132,6 @@
         this.ripples.push({ x, y, radius: 6, maxRadius: 48, alpha: 0.7 });
       }
 
-      // レベルアップ時に指定ミリ秒（デフォルト5000ms = 5秒間）花火を打ち上げる
       triggerLevelUpFireworks(durationMs = 5000) {
         const now = performance.now();
         this.fireworkEndTime = Math.max(this.fireworkEndTime, now + durationMs);
@@ -3003,7 +3199,6 @@
         }
       }
 
-      // UI全体更新
       updateUI() {
         const isVisit = Boolean(this.visitingTarget);
         const activeBeaver = isVisit
@@ -3030,11 +3225,11 @@
 
         setText('ui-beaver-name', activeBeaver.name);
         setText('ui-owner-name', isVisit ? this.visitingTarget.ownerName : this.state.user.ownerName);
-        setText('ui-my-account-id', this.state.user.accountId);
-        setText('ui-my-transfer-code', this.state.user.transferCode || '0000');
+        setText('ui-my-account-id', this.formatSecretId(this.state.user.accountId));
+        setText('ui-my-transfer-code', this.formatSecretCode(this.state.user.transferCode || '00000000'));
         setText('ui-friends-badge', this.state.user.favoriteIds.length);
         setText('ui-favorite-count-label', `お気に入り: ${this.state.user.favoriteIds.length}人`);
-
+        setText('ui-secret-visibility-label', this.secretsVisible ? 'ID・引継を隠す' : 'ID・引継を表示');
         const badge = document.getElementById('ui-stage-badge');
         if (badge) {
           badge.textContent = stage.label;
@@ -3268,7 +3463,6 @@
         };
       }
 
-      // トースト通知
       showToast(message) {
         const container = document.getElementById('toast-container');
         const toast = document.createElement('div');
@@ -3828,7 +4022,6 @@
 
         const dolphinWave = isSwimming ? Math.sin(this.time * 3.4) : 0;
 
-        // 1. 大きなしっぽ
         ctx.save();
         const tailFreq = isHappy ? 14 : isSwimming ? 3.4 : sadLevel >= 2 ? 1.8 : 4;
         const tailWag = isSleeping
@@ -3854,7 +4047,6 @@
         ctx.stroke();
         ctx.restore();
 
-        // 2. 奥側の後ろ足
         ctx.save();
         const backFootKick = isSwimming
           ? Math.sin(this.time * 3.4 - 0.5) * 0.42
@@ -3903,7 +4095,6 @@
         }
         ctx.restore();
 
-        // 3. 奥側の前足
         ctx.save();
         const backArmSwing = isWorking
           ? Math.cos(this.time * 18) * 5.5
@@ -3920,7 +4111,6 @@
         ctx.fill();
         ctx.restore();
 
-        // 4. 洋梨型の胴体
         ctx.save();
         if (isSwimming) {
           ctx.translate(0, dolphinWave * 1.6);
@@ -3953,7 +4143,6 @@
         ctx.fill();
         ctx.restore();
 
-        // 5. 手前側の後ろ足
         ctx.save();
         const frontFootKick = isSwimming
           ? Math.sin(this.time * 3.4 - 0.5) * 0.42
@@ -4009,7 +4198,6 @@
         }
         ctx.restore();
 
-        // 6. 頭
         ctx.save();
         const refuseWave = isRefusing
           ? Math.sin(Math.min(1, Math.max(0, 1 - (this.beaverAnim.actionTimer / (this.beaverAnim.refuseDuration || 120)))) * Math.PI * 4)
@@ -4147,7 +4335,6 @@
 
         ctx.restore();
 
-        // 手前側の前足
         ctx.save();
         const frontArmSwing = isWorking
           ? -3 + Math.sin(this.time * 18) * 5.5
