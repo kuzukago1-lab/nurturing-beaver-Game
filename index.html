@@ -95,7 +95,7 @@
     </button>
   </div>
 
-  <!-- スタート画面（初回または未登録時に表示する飼い主登録＆アカウントID発行画面） -->
+  <!-- スタート画面（初回または未登録時に表示する飼い主登録＆8桁パスワード認証画面） -->
   <div id="start-screen-overlay" class="start-backdrop fixed inset-0 z-40 flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
     <div class="w-full max-w-md bg-white/95 backdrop-blur rounded-3xl p-5 sm:p-6 shadow-2xl border-4 border-amber-300 my-auto">
       <div class="flex flex-col items-center text-center mb-4">
@@ -107,16 +107,16 @@
         </span>
         <h2 class="text-xl sm:text-2xl font-extrabold text-amber-950">もくもく川辺のビーバー育成記</h2>
         <p class="text-xs text-amber-800 mt-1">
-          飼い主名とビーバーの名前を登録するか、引き継ぎコードでデータを読み込みましょう。
+          配布IDと8桁パスワード（2段階）を登録するか、登録済みのIDと8桁パスワードでログインしましょう。
         </p>
       </div>
 
-      <!-- 他の端末からのデータ引き継ぎエリア -->
+      <!-- 登録済みアカウント（スマホ・PC）からID＋8桁パスワードでログインするエリア -->
       <div class="bg-sky-50 border-2 border-sky-200 rounded-2xl p-3 mb-3">
         <div class="flex items-center justify-between gap-2">
-          <span class="text-xs font-extrabold text-sky-950">スマホ・PCからデータ引き継ぎ</span>
+          <span class="text-xs font-extrabold text-sky-950">スマホ・PCからIDと8桁パスワードでログイン</span>
           <button type="button" id="btn-toggle-start-transfer" class="px-2.5 py-1 rounded-lg bg-sky-500 hover:bg-sky-600 text-white text-[11px] font-extrabold transition">
-            コードで読み込む
+            ログインを開く
           </button>
         </div>
         <div id="start-transfer-box" class="hidden mt-2.5 pt-2.5 border-t border-sky-200 space-y-2">
@@ -129,23 +129,26 @@
               </div>
             </div>
             <div>
-              <label for="input-start-transfer-code" class="block text-[11px] font-bold text-sky-900 mb-0.5">引き継ぎコード（8桁数字）</label>
-              <input id="input-start-transfer-code" type="text" inputmode="numeric" maxlength="8" placeholder="例: 48291034" class="w-full px-2.5 py-1.5 rounded-xl border border-sky-300 bg-white text-xs font-extrabold text-sky-950 focus:outline-none">
+              <label for="input-start-transfer-code" class="block text-[11px] font-bold text-sky-900 mb-0.5">パスワード（8桁数字）</label>
+              <input id="input-start-transfer-code" type="password" inputmode="numeric" maxlength="8" placeholder="例: 48291034" class="w-full px-2.5 py-1.5 rounded-xl border border-sky-300 bg-white text-xs font-extrabold text-sky-950 focus:outline-none">
             </div>
           </div>
+          <p id="start-login-status-msg" class="hidden text-[11px] font-extrabold text-sky-800 bg-sky-100/80 rounded-lg px-2.5 py-1.5">
+            ログイン情報確認中…
+          </p>
           <button type="button" id="btn-exec-start-transfer" class="btn-game w-full py-2 px-3 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-extrabold shadow-xs transition">
-            このIDと引き継ぎコードでデータを読み込む
+            このIDと8桁パスワードでログイン
           </button>
         </div>
       </div>
 
-      <!-- 自動発行されるアカウントID＆初期引き継ぎコード表示 -->
-      <div class="bg-amber-50 border-2 border-amber-200 rounded-2xl p-3 mb-4 space-y-2">
+      <!-- 初起動時に自動配布されるアカウントID表示 -->
+      <div class="bg-amber-50 border-2 border-amber-200 rounded-2xl p-3 mb-4 space-y-1.5">
         <div>
           <div class="flex items-center justify-between gap-2">
-            <span class="text-[11px] font-extrabold text-amber-800">あなたのアカウントID（フレンド検索用）</span>
+            <span class="text-[11px] font-extrabold text-amber-800">初起動配布アカウントID（ログイン・フレンド検索用）</span>
             <button type="button" id="btn-regenerate-start-id" class="text-[11px] font-bold text-amber-700 hover:text-amber-950 underline transition">
-              IDを変更
+              別のIDを配布
             </button>
           </div>
           <div class="flex items-center justify-between mt-1 gap-2">
@@ -158,12 +161,12 @@
           </div>
         </div>
         <div class="flex items-center justify-between pt-1 border-t border-amber-200/80 text-xs">
-          <span class="font-bold text-amber-800">引き継ぎコード（8桁）：<strong id="start-preview-code" class="text-amber-950 tracking-widest">00000000</strong></span>
-          <span class="text-[10px] font-bold text-amber-700">あとから変更もできます</span>
+          <span class="font-bold text-amber-800">認証方式：<strong class="text-amber-950">ID + 8桁パスワード（2段階）</strong></span>
+          <span class="text-[10px] font-bold text-amber-700">二重ログイン防止付き</span>
         </div>
       </div>
 
-      <!-- 飼い主＆ビーバー登録フォーム -->
+      <!-- 飼い主＆ビーバー＆8桁パスワード（2段階）登録フォーム -->
       <form id="start-register-form" class="space-y-3">
         <div>
           <label for="input-start-owner" class="block text-xs font-extrabold text-amber-950 mb-1">
@@ -177,6 +180,27 @@
             ビーバーの名前（最大12文字）
           </label>
           <input id="input-start-beaver" type="text" maxlength="12" required placeholder="例：ぽんた" class="w-full px-3.5 py-2.5 rounded-xl border-2 border-amber-300 focus:border-amber-500 focus:outline-none font-bold text-sm text-amber-950 bg-amber-50/40">
+        </div>
+
+        <!-- 8桁パスワード（2段階確認） -->
+        <div class="bg-emerald-50/80 border-2 border-emerald-200 rounded-2xl p-3 space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-extrabold text-emerald-950">8桁パスワード設定（2段階確認）</span>
+            <span class="text-[10px] font-bold text-emerald-700">半角数字8桁</span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div>
+              <label for="input-start-pass-1" class="block text-[11px] font-bold text-emerald-900 mb-0.5">1段階目：パスワード（8桁）</label>
+              <input id="input-start-pass-1" type="password" inputmode="numeric" maxlength="8" required placeholder="例: 12345678" class="w-full px-2.5 py-2 rounded-xl border border-emerald-300 bg-white text-xs font-extrabold text-emerald-950 focus:outline-none">
+            </div>
+            <div>
+              <label for="input-start-pass-2" class="block text-[11px] font-bold text-emerald-900 mb-0.5">2段階目：確認用（再入力）</label>
+              <input id="input-start-pass-2" type="password" inputmode="numeric" maxlength="8" required placeholder="もう一度8桁入力" class="w-full px-2.5 py-2 rounded-xl border border-emerald-300 bg-white text-xs font-extrabold text-emerald-950 focus:outline-none">
+            </div>
+          </div>
+          <p class="text-[10px] font-bold text-emerald-700">
+            1段階目と2段階目に同じ8桁数字を入力してください（初期化時にも必要です）。
+          </p>
         </div>
 
         <!-- ビーバー毛色（10色）選択 -->
@@ -225,7 +249,6 @@
 
   <!-- 再利用可能な環境非依存SVGアイコンスプライト定義 -->
   <svg xmlns="http://www.w3.org/2000/svg" class="hidden" aria-hidden="true">
-    <!-- ビーバー顔アイコン -->
     <symbol id="ico-beaver" viewBox="0 0 32 32">
       <path d="M5.2 14.3C4.4 14.5 4.3 15.6 5.1 16.0L8.2 16.8C8.9 17.0 9.4 16.4 9.2 15.6L8.4 13.8C7.8 13.0 6.2 13.5 5.2 14.3Z" fill="#5c3317"/>
       <path d="M5.9 14.7L7.9 15.3L7.3 14.1C6.9 13.8 6.3 14.0 5.9 14.7Z" fill="#f9a8d4"/>
@@ -233,7 +256,6 @@
       <path d="M26.1 14.7L24.1 15.3L24.7 14.1C25.1 13.8 25.7 14.0 26.1 14.7Z" fill="#f9a8d4"/>
       <path d="M8.5 11.5C10.5 7.2 21.5 7.2 23.5 11.5C26.2 14.5 26.5 20.5 23.2 24.2C20.5 26.8 11.5 26.8 8.8 24.2C5.5 20.5 5.8 14.5 8.5 11.5Z" fill="#9a5b25"/>
       <ellipse cx="16" cy="20.4" rx="7.2" ry="4.8" fill="#fde68a"/>
-      <!-- 前歯 -->
       <rect x="14.0" y="21.6" width="1.7" height="4.9" rx="0.7" fill="#ffffff" stroke="#d6d3d1" stroke-width="0.5"/>
       <rect x="16.3" y="21.6" width="1.7" height="4.9" rx="0.7" fill="#ffffff" stroke="#d6d3d1" stroke-width="0.5"/>
       <ellipse cx="16" cy="17.3" rx="3.1" ry="2.1" fill="#292524"/>
@@ -253,7 +275,6 @@
       <circle cx="24.6" cy="17.8" r="1.9" fill="#f43f5e" fill-opacity="0.32"/>
     </symbol>
 
-    <!-- 流木（丸太）アイコン -->
     <symbol id="ico-wood" viewBox="0 0 32 32">
       <g transform="rotate(-22 16 16)">
         <rect x="3" y="10" width="24" height="12" rx="5" fill="#92400e"/>
@@ -264,7 +285,6 @@
       </g>
     </symbol>
 
-    <!-- どんぐりアイコン -->
     <symbol id="ico-acorn" viewBox="0 0 32 32">
       <path d="M16 4C16.5 2.5 18 2 19.5 2.5" stroke="#5c3317" stroke-width="2.4" stroke-linecap="round" fill="none"/>
       <path d="M8 14C8 22 11.5 27.5 16 29C20.5 27.5 24 22 24 14Z" fill="#d97706"/>
@@ -272,7 +292,6 @@
       <path d="M10 10.5L22 10.5M11.5 13L20.5 13" stroke="#451a03" stroke-width="1.1" stroke-linecap="round"/>
     </symbol>
 
-    <!-- りんごアイコン -->
     <symbol id="ico-apple" viewBox="0 0 32 32">
       <path d="M16 8C16 5.5 17.5 4 19.5 3.5" stroke="#78350f" stroke-width="2.2" stroke-linecap="round" fill="none"/>
       <path d="M16.5 7.5C19 5.5 23 6 23.5 8.5C21.5 10.2 18.2 9.8 16.5 7.5Z" fill="#22c55e"/>
@@ -280,7 +299,6 @@
       <ellipse cx="11.5" cy="14" rx="1.6" ry="3" transform="rotate(-20 11.5 14)" fill="#fca5a5" fill-opacity="0.7"/>
     </symbol>
 
-    <!-- 若枝・葉っぱアイコン -->
     <symbol id="ico-branch" viewBox="0 0 32 32">
       <path d="M6 26C12 20 19 14 26 7" stroke="#78350f" stroke-width="2.6" stroke-linecap="round" fill="none"/>
       <path d="M14 18C10 16 8 12 11 9C14 10 16 14 14 18Z" fill="#22c55e"/>
@@ -288,18 +306,15 @@
       <path d="M23 9C22 5 25 3 28 5C28 8 26 10 23 9Z" fill="#4ade80"/>
     </symbol>
 
-    <!-- ハートアイコン -->
     <symbol id="ico-heart" viewBox="0 0 32 32">
       <path d="M16 27.5C16 27.5 5 20.2 5 12.2C5 8.5 7.8 5.8 11.2 5.8C13.4 5.8 15.1 6.9 16 8.5C16.9 6.9 18.6 5.8 20.8 5.8C24.2 5.8 27 8.5 27 12.2C27 20.2 16 27.5 16 27.5Z" fill="#f43f5e"/>
       <ellipse cx="10.5" cy="10.8" rx="1.8" ry="1.1" transform="rotate(-30 10.5 10.8)" fill="#fda4af"/>
     </symbol>
 
-    <!-- なでなで手アイコン -->
     <symbol id="ico-pet" viewBox="0 0 32 32">
       <path d="M11 16V8.5C11 7.4 11.9 6.5 13 6.5C14.1 6.5 15 7.4 15 8.5V14M15 13V7.5C15 6.4 15.9 5.5 17 5.5C18.1 5.5 19 6.4 19 7.5V14M19 14V9.5C19 8.4 19.9 7.5 21 7.5C22.1 7.5 23 8.4 23 9.5V19C23 24 19.5 27.5 15 27.5C11.2 27.5 8.5 25 7.5 21.5L6.2 17.5C5.8 16.4 6.5 15.2 7.6 15C8.5 14.8 9.4 15.3 9.8 16.2L11 18.5" fill="#fde68a" stroke="#92400e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
     </symbol>
 
-    <!-- ダム建築（ハンマー＆丸太）アイコン -->
     <symbol id="ico-dam" viewBox="0 0 32 32">
       <rect x="4" y="19" width="24" height="7" rx="3" fill="#78350f"/>
       <rect x="7" y="13" width="18" height="6" rx="2.5" fill="#b45309"/>
@@ -307,14 +322,12 @@
       <rect x="21" y="4" width="7" height="4" rx="1.2" transform="rotate(45 24.5 6)" fill="#451a03"/>
     </symbol>
 
-    <!-- カヌー・おでかけアイコン -->
     <symbol id="ico-canoe" viewBox="0 0 32 32">
       <path d="M3 18C7 24 25 24 29 18C24 20 8 20 3 18Z" fill="#b45309" stroke="#78350f" stroke-width="1.4" stroke-linejoin="round"/>
       <path d="M12 10L21 23" stroke="#78350f" stroke-width="2.2" stroke-linecap="round"/>
       <path d="M4 25.5Q10 23.5 16 25.5T28 25.5" stroke="#0284c7" stroke-width="2" stroke-linecap="round" fill="none"/>
     </symbol>
 
-    <!-- ギフトボックスアイコン -->
     <symbol id="ico-gift" viewBox="0 0 32 32">
       <rect x="6" y="13" width="20" height="14" rx="2.5" fill="#f59e0b"/>
       <rect x="4.5" y="9.5" width="23" height="4.5" rx="1.5" fill="#fbbf24"/>
@@ -322,13 +335,11 @@
       <path d="M16 9.5C13.5 9.5 10.5 8 11 5.8C11.5 4 14.5 5.2 16 9.5ZM16 9.5C18.5 9.5 21.5 8 21 5.8C20.5 4 17.5 5.2 16 9.5Z" fill="#f43f5e"/>
     </symbol>
 
-    <!-- 本・ルールガイドアイコン -->
     <symbol id="ico-book" viewBox="0 0 32 32">
       <path d="M5 7C9 6 13.5 7 16 9C18.5 7 23 6 27 7V24C23 23 18.5 24 16 26C13.5 24 9 23 5 24V7Z" fill="#fef3c7" stroke="#92400e" stroke-width="2" stroke-linejoin="round"/>
       <path d="M16 9V26" stroke="#92400e" stroke-width="1.8"/>
     </symbol>
 
-    <!-- スピーカー（オン・オフ）アイコン -->
     <symbol id="ico-sound-on" viewBox="0 0 32 32">
       <path d="M6 12H11L17 7V25L11 20H6V12Z" fill="#57534e"/>
       <path d="M21 11.5C22.8 13.2 22.8 18.8 21 20.5M24 8.5C27.2 11.8 27.2 20.2 24 23.5" stroke="#57534e" stroke-width="2.2" stroke-linecap="round" fill="none"/>
@@ -338,12 +349,10 @@
       <path d="M21 12L27 20M27 12L21 20" stroke="#ef4444" stroke-width="2.4" stroke-linecap="round"/>
     </symbol>
 
-    <!-- 鉛筆・編集アイコン -->
     <symbol id="ico-edit" viewBox="0 0 32 32">
       <path d="M7 21.5L20.5 8L24 11.5L10.5 25H7V21.5Z" fill="#d97706" stroke="#78350f" stroke-width="1.6" stroke-linejoin="round"/>
     </symbol>
 
-    <!-- キラキラアイコン -->
     <symbol id="ico-sparkle" viewBox="0 0 32 32">
       <path d="M16 3L18.8 13.2L29 16L18.8 18.8L16 29L13.2 18.8L3 16L13.2 13.2L16 3Z" fill="#facc15" stroke="#eab308" stroke-width="1.2" stroke-linejoin="round"/>
     </symbol>
@@ -376,16 +385,16 @@
               <p class="text-xs text-amber-700 font-bold mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
                 <span>飼い主: <strong id="ui-owner-name" class="text-amber-950">あなた</strong></span>
                 <span class="text-amber-300">|</span>
-                <button type="button" id="btn-toggle-secret-visibility" title="アカウントIDと引き継ぎコードの表示・非表示を切り替え" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-stone-100 hover:bg-stone-200 text-stone-800 font-extrabold transition">
-                  <span id="ui-secret-visibility-label">ID・引継を表示</span>
+                <button type="button" id="btn-toggle-secret-visibility" title="アカウントIDと8桁パスワードの表示・非表示を切り替え" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-stone-100 hover:bg-stone-200 text-stone-800 font-extrabold transition">
+                  <span id="ui-secret-visibility-label">ID・パスを表示</span>
                 </button>
                 <button type="button" id="btn-copy-my-id" title="クリックでアカウントIDをコピー" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-100 hover:bg-amber-200 text-amber-950 font-extrabold transition">
                   <span>ID: <span id="ui-my-account-id">●●●●●●</span></span>
                   <span class="text-[10px] text-amber-700">[コピー]</span>
                 </button>
-                <button type="button" id="btn-open-transfer-modal" title="引き継ぎコードの確認・再発行・読み込み" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-sky-100 hover:bg-sky-200 text-sky-900 font-extrabold transition">
-                  <span>引継コード: <span id="ui-my-transfer-code">●●●●●●●●</span></span>
-                  <span class="text-[10px] text-sky-700">[引継管理]</span>
+                <button type="button" id="btn-open-transfer-modal" title="他端末ログイン・8桁パスワード管理" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-sky-100 hover:bg-sky-200 text-sky-900 font-extrabold transition">
+                  <span>8桁パス: <span id="ui-my-transfer-code">●●●●●●●●</span></span>
+                  <span class="text-[10px] text-sky-700">[ログイン/パス管理]</span>
                 </button>
                 <span class="text-amber-300">|</span>
                 <span>ダムLv.<span id="ui-dam-level" class="text-sm text-amber-900">1</span> (<span id="ui-dam-progress">0</span>)</span>
@@ -651,11 +660,11 @@
     </div>
   </div>
 
-  <!-- 引き継ぎコード確認・再発行＆他端末からの読み込みモーダル -->
+  <!-- 8桁パスワードログイン＆変更管理モーダル -->
   <div id="transfer-modal-overlay" class="hidden fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl max-w-md w-full p-5 shadow-2xl border-2 border-sky-300 space-y-4 max-h-[88vh] overflow-y-auto">
       <div class="flex items-center justify-between border-b border-sky-100 pb-2.5">
-        <h3 class="text-base sm:text-lg font-extrabold text-amber-950">アカウントID ＆ 引き継ぎコード</h3>
+        <h3 class="text-base sm:text-lg font-extrabold text-amber-950">アカウントID ＆ 8桁パスワード管理</h3>
         <div class="flex items-center gap-1.5">
           <button type="button" id="btn-toggle-modal-secret" class="px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-extrabold transition">
             表示する
@@ -666,34 +675,53 @@
         </div>
       </div>
 
-      <!-- 自分の引き継ぎ情報 -->
-      <div class="bg-amber-50 border-2 border-amber-200 rounded-2xl p-3.5 space-y-2">
-        <div class="text-xs font-extrabold text-amber-900">現在の端末の引き継ぎ情報（他の端末へ送る場合）</div>
+      <!-- 現在のアカウント情報＆2段階パスワード更新 -->
+      <div class="bg-amber-50 border-2 border-amber-200 rounded-2xl p-3.5 space-y-2.5">
+        <div class="text-xs font-extrabold text-amber-900">現在のログインアカウント情報</div>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <div class="bg-white rounded-xl p-2 border border-amber-200">
             <div class="text-[10px] font-bold text-amber-700">アカウントID</div>
             <div id="modal-my-account-id" class="text-sm font-extrabold text-amber-950 tracking-wider">BV-●●●●●●</div>
           </div>
           <div class="bg-white rounded-xl p-2 border border-amber-200">
-            <div class="text-[10px] font-bold text-amber-700">引き継ぎコード（8桁）</div>
+            <div class="text-[10px] font-bold text-amber-700">設定中の8桁パスワード</div>
             <div id="modal-my-transfer-code" class="text-sm font-extrabold text-sky-900 tracking-widest">●●●●●●●●</div>
           </div>
         </div>
-        <div class="flex gap-2 pt-1">
+        <div class="flex gap-2">
           <button type="button" id="btn-copy-transfer-pair" class="flex-1 py-2 px-3 rounded-xl bg-amber-200 hover:bg-amber-300 text-amber-950 text-xs font-extrabold transition">
-            IDとコードをコピー
+            IDと8桁パスワードをコピー
           </button>
-          <button type="button" id="btn-reissue-transfer-code" class="py-2 px-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-extrabold transition">
-            コード再発行
+        </div>
+
+        <div class="pt-2 border-t border-amber-200/80 space-y-2">
+          <div class="flex items-center justify-between gap-2">
+            <div class="text-[11px] font-extrabold text-emerald-950">8桁パスワード変更（2段階確認）</div>
+            <button type="button" id="btn-toggle-reset-pass-visibility" class="px-2 py-0.5 rounded-md bg-emerald-100 hover:bg-emerald-200 text-emerald-900 text-[10px] font-extrabold transition">
+              パスワード表示
+            </button>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div>
+              <label for="input-modal-new-pass-1" class="block text-[10px] font-bold text-emerald-900 mb-0.5">1段階目：新しい8桁パス</label>
+              <input id="input-modal-new-pass-1" type="password" inputmode="numeric" maxlength="8" placeholder="8桁の数字" class="w-full px-2.5 py-1.5 rounded-xl border border-emerald-300 bg-white text-xs font-extrabold text-emerald-950 focus:outline-none">
+            </div>
+            <div>
+              <label for="input-modal-new-pass-2" class="block text-[10px] font-bold text-emerald-900 mb-0.5">2段階目：確認用（再入力）</label>
+              <input id="input-modal-new-pass-2" type="password" inputmode="numeric" maxlength="8" placeholder="もう一度8桁入力" class="w-full px-2.5 py-1.5 rounded-xl border border-emerald-300 bg-white text-xs font-extrabold text-emerald-950 focus:outline-none">
+            </div>
+          </div>
+          <button type="button" id="btn-reissue-transfer-code" class="w-full py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold transition">
+            2段階確認で8桁パスワードを更新
           </button>
         </div>
       </div>
 
-      <!-- 他の端末・アカウントから読み込む -->
+      <!-- 他の端末・アカウントからID＋8桁パスワードでログイン -->
       <div class="bg-sky-50 border-2 border-sky-200 rounded-2xl p-3.5 space-y-2.5">
-        <div class="text-xs font-extrabold text-sky-950">別の端末・アカウントからデータを読み込む</div>
+        <div class="text-xs font-extrabold text-sky-950">別の端末・アカウントへログイン（ID + 8桁パス）</div>
         <p class="text-[11px] text-sky-800 leading-relaxed">
-          読み込み元のアカウントID（6桁数字）と引き継ぎコード（8桁数字）を入力すると、クラウド上のセーブデータをこの端末へ読み込みます（同一アカウントの二重ログイン中は読み込みできません）。
+          ログインしたいアカウントID（6桁数字）と設定済みの8桁パスワードを入力してください。同一アカウントが他端末で稼働中の場合は二重ログインを防止します。
         </p>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <div>
@@ -704,23 +732,24 @@
             </div>
           </div>
           <div>
-            <label for="input-modal-transfer-code" class="block text-[11px] font-bold text-sky-900 mb-0.5">引き継ぎコード（8桁）</label>
-            <input id="input-modal-transfer-code" type="text" inputmode="numeric" maxlength="8" placeholder="12345678" class="w-full px-2.5 py-1.5 rounded-xl border border-sky-300 bg-white text-xs font-extrabold text-sky-950 focus:outline-none">
+            <label for="input-modal-transfer-code" class="block text-[11px] font-bold text-sky-900 mb-0.5">パスワード（8桁）</label>
+            <input id="input-modal-transfer-code" type="password" inputmode="numeric" maxlength="8" placeholder="12345678" class="w-full px-2.5 py-1.5 rounded-xl border border-sky-300 bg-white text-xs font-extrabold text-sky-950 focus:outline-none">
           </div>
         </div>
         <button type="button" id="btn-exec-modal-transfer" class="btn-game w-full py-2.5 px-4 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs sm:text-sm font-extrabold shadow transition">
-          セーブデータを読み込む
+          このIDと8桁パスワードでログイン
         </button>
       </div>
     </div>
   </div>
 
-  <!-- 名前変更・確認用カスタムモーダル -->
+  <!-- 名前変更・初期化パスワード確認用カスタムモーダル -->
   <div id="modal-overlay" class="hidden fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl max-w-sm w-full p-5 shadow-2xl border-2 border-amber-300">
       <h3 id="modal-title" class="text-lg font-extrabold text-amber-950 mb-2">タイトル</h3>
       <p id="modal-desc" class="text-xs sm:text-sm text-amber-800 mb-3"></p>
       <input id="modal-input" type="text" maxlength="12" class="hidden w-full px-3 py-2 rounded-xl border-2 border-amber-300 focus:border-amber-500 focus:outline-none font-bold text-amber-950 mb-4" placeholder="新しい名前（12文字まで）">
+      <input id="modal-password-input" type="password" inputmode="numeric" maxlength="8" class="hidden w-full px-3 py-2 rounded-xl border-2 border-rose-300 focus:border-rose-500 focus:outline-none font-extrabold text-amber-950 mb-4" placeholder="最初に設定した8桁のパスワードを入力">
       <div class="flex justify-end gap-2">
         <button id="modal-cancel" class="px-4 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs sm:text-sm font-bold">
           キャンセル
@@ -811,7 +840,7 @@
   <!-- 画面下部トースト通知 -->
   <div id="toast-container" class="fixed bottom-16 sm:bottom-5 inset-x-3 sm:inset-x-6 z-50 pointer-events-none flex flex-col items-center gap-2"></div>
 
-  <!-- Firebase SDK (v10 モジュール・オンライン保存＆ID重複防止用) -->
+  <!-- Firebase SDK (v10 モジュール・オンライン保存＆ID重複・二重ログイン防止用) -->
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
     import { getAuth, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
@@ -1062,7 +1091,7 @@
           user: {
             uid: 'local_player_001',
             accountId: this.generateAccountId(),
-            transferCode: this.generateTransferCode(),
+            transferCode: '',
             ownerName: 'あなた',
             wood: 6,
             coins: 35,
@@ -1125,14 +1154,6 @@
       generateAccountId() {
         const num = Math.floor(100000 + Math.random() * 900000);
         return `BV-${num}`;
-      }
-
-      generateTransferCode() {
-        let code = '';
-        for (let i = 0; i < 8; i++) {
-          code += String(Math.floor(Math.random() * 10));
-        }
-        return code;
       }
 
       async checkAccountSessionLock(accountId, ignoreCurrentLock = false) {
@@ -1249,12 +1270,12 @@
           return { ok: false, message: 'アカウントIDは6桁の数字で入力してください。' };
         }
         if (!/^\d{8}$/.test(normalizedCode)) {
-          return { ok: false, message: '引き継ぎコードは8桁の半角数字で入力してください。' };
+          return { ok: false, message: 'パスワードは8桁の半角数字で入力してください。' };
         }
 
         const fb = this.getFb();
         if (!fb) {
-          return { ok: false, message: 'Firebaseが初期化されていないため引き継ぎできません。' };
+          return { ok: false, message: 'Firebaseが初期化されていないためログインできません。' };
         }
 
         const ready = await this.ensureOnlineReady();
@@ -1268,6 +1289,7 @@
         }
 
         try {
+          let foundAccount = false;
           let matchedDoc = null;
 
           const qByUser = fb.query(
@@ -1276,10 +1298,12 @@
           );
           const snapByUser = await fb.getDocs(qByUser);
           snapByUser.forEach((docSnap) => {
-            if (matchedDoc) return;
             const raw = docSnap.data() || {};
-            const code = String((raw.user && raw.user.transferCode) || raw.transferCode || '').trim();
-            if (code === normalizedCode) {
+            const savedPass = String((raw.user && raw.user.transferCode) || raw.transferCode || '').trim();
+            if (/^\d{8}$/.test(savedPass)) {
+              foundAccount = true;
+            }
+            if (!matchedDoc && savedPass === normalizedCode) {
               matchedDoc = { id: docSnap.id, data: raw };
             }
           });
@@ -1291,17 +1315,22 @@
             );
             const snapByProf = await fb.getDocs(qByProf);
             snapByProf.forEach((docSnap) => {
-              if (matchedDoc) return;
               const raw = docSnap.data() || {};
-              const code = String((raw.user && raw.user.transferCode) || raw.transferCode || '').trim();
-              if (code === normalizedCode) {
+              const savedPass = String((raw.user && raw.user.transferCode) || raw.transferCode || '').trim();
+              if (/^\d{8}$/.test(savedPass)) {
+                foundAccount = true;
+              }
+              if (!matchedDoc && savedPass === normalizedCode) {
                 matchedDoc = { id: docSnap.id, data: raw };
               }
             });
           }
 
           if (!matchedDoc) {
-            return { ok: false, message: `「${normalizedId}」と引き継ぎコード「${normalizedCode}」の組み合わせが見つかりません。` };
+            if (foundAccount) {
+              return { ok: false, message: `アカウントID「${normalizedId}」の8桁パスワードが一致しません。` };
+            }
+            return { ok: false, message: `アカウントID「${normalizedId}」または8桁パスワードが見つかりません。先に新規登録してください。` };
           }
 
           const restored = this.normalizeLoadedData(matchedDoc.data);
@@ -1310,8 +1339,8 @@
           restored.user.transferCode = normalizedCode;
           return { ok: true, data: restored, sourceUid: matchedDoc.id };
         } catch (err) {
-          console.error('引き継ぎデータの読み込みに失敗:', err);
-          return { ok: false, message: `読み込みエラー: ${err && err.message ? err.message : '通信に失敗しました'}` };
+          console.error('ログインデータの読み込みに失敗:', err);
+          return { ok: false, message: `ログインエラー: ${err && err.message ? err.message : '通信に失敗しました'}` };
         }
       }
 
@@ -1366,9 +1395,8 @@
           ...def.user,
           ...(safeParsed.user || {})
         };
-        if (!/^\d{8}$/.test(String(mergedUser.transferCode || ''))) {
-          mergedUser.transferCode = this.generateTransferCode();
-        }
+        const rawCode = String(mergedUser.transferCode || '').trim();
+        mergedUser.transferCode = /^\d{8}$/.test(rawCode) ? rawCode : '';
         return {
           ...def,
           registered: Boolean(safeParsed.registered),
@@ -1631,7 +1659,7 @@
         this.neighbors = [];
         this.visitingTarget = null;
         this.pendingStartAccountId = null;
-        this.pendingStartTransferCode = null;
+        this.pendingStartTransferCode = '';
         this.searchedNeighbor = null;
         this.friendSortMode = 'fav_first';
         this.secretsVisible = false;
@@ -1718,7 +1746,7 @@
         this.state = await this.storage.loadGameData();
         this.neighbors = await this.storage.fetchNeighbors();
         this.pendingStartAccountId = this.state.user.accountId;
-        this.pendingStartTransferCode = this.state.user.transferCode || this.storage.generateTransferCode();
+        this.pendingStartTransferCode = this.state.user.transferCode || '';
         this.secretsVisible = false;
         const savedBody = this.state.beaver.bodyStyle || {};
         this.pendingBeaverCustom = {
@@ -1825,9 +1853,22 @@
       }
 
       formatSecretCode(transferCode, forceVisible = false) {
-        const code = String(transferCode || '00000000');
+        const code = String(transferCode || '').trim();
+        if (!code) return '未設定';
         if (forceVisible || this.secretsVisible) return code;
-        return '●'.repeat(Math.max(8, code.length));
+        return '●'.repeat(code.length);
+      }
+
+      validateTwoStepPassword8(p1Raw, p2Raw) {
+        const p1 = String(p1Raw || '').replace(/[^0-9]/g, '');
+        const p2 = String(p2Raw || '').replace(/[^0-9]/g, '');
+        if (p1.length !== 8 || p2.length !== 8) {
+          return { ok: false, message: '8桁パスワードは1段階目・2段階目ともに8桁の半角数字で入力してください' };
+        }
+        if (p1 !== p2) {
+          return { ok: false, message: '1段階目と2段階目の8桁パスワードが一致しません' };
+        }
+        return { ok: true, password8: p1 };
       }
 
       toggleSecretVisibility() {
@@ -1855,59 +1896,74 @@
           return;
         }
         if (code.length !== 8) {
-          this.showToast('引き継ぎコードは8桁の数字で入力してください');
+          this.showToast('パスワードは8桁の半角数字で入力してください');
           return;
         }
 
         const fullId = `BV-${digits}`;
-        this.showToast(`「${fullId}」の引き継ぎデータを確認中...`);
-        const res = await this.storage.fetchSaveByTransferCode(fullId, code);
-        if (!res.ok || !res.data) {
-          this.showToast(res.message || '引き継ぎデータの読み込みに失敗しました');
-          return;
+        const statusMsgEl = document.getElementById('start-login-status-msg');
+        if (statusMsgEl) {
+          statusMsgEl.textContent = `「${fullId}」のログイン情報確認中…`;
+          statusMsgEl.classList.remove('hidden');
         }
+        this.showToast(`「${fullId}」のログイン情報確認中…`);
 
-        const lockResult = await this.storage.acquireOrRenewSessionLock(fullId);
-        if (!lockResult.ok) {
-          this.showToast(lockResult.message || 'このアカウントは現在別の端末でログイン中です');
-          return;
+        try {
+          const res = await this.storage.fetchSaveByTransferCode(fullId, code);
+          if (!res.ok || !res.data) {
+            this.showToast(res.message || 'ログインに失敗しました');
+            return;
+          }
+
+          if (statusMsgEl) {
+            statusMsgEl.textContent = `「${fullId}」の二重ログインを確認中…`;
+          }
+          const lockResult = await this.storage.acquireOrRenewSessionLock(fullId);
+          if (!lockResult.ok) {
+            this.showToast(lockResult.message || 'このアカウントは現在別の端末でログイン中です');
+            return;
+          }
+
+          const currentUid = this.storage.uid || this.state.user.uid;
+          const imported = this.storage.normalizeLoadedData(res.data);
+          imported.registered = true;
+          imported.user.uid = currentUid;
+          imported.user.accountId = fullId;
+          imported.user.transferCode = code;
+
+          this.state = imported;
+          this.visitingTarget = null;
+          this.pendingStartAccountId = fullId;
+          this.pendingStartTransferCode = code;
+          this.pendingBeaverCustom = {
+            color: this.state.beaver.color,
+            headSize: this.state.beaver.bodyStyle.headSize,
+            waistSize: this.state.beaver.bodyStyle.waistSize,
+            tailLength: this.state.beaver.bodyStyle.tailLength,
+            tailSize: this.state.beaver.bodyStyle.tailSize
+          };
+
+          this.syncMaxStamina(false);
+          this.addActivityLog(`ID「${fullId}」と8桁パスワードでログインしました！`, '#ico-sparkle');
+          await this.storage.saveGameData(this.state);
+          this.neighbors = await this.storage.fetchNeighbors();
+
+          const transferModal = document.getElementById('transfer-modal-overlay');
+          if (transferModal) transferModal.classList.add('hidden');
+
+          this.syncStartScreenState();
+          this.updateUI();
+          this.renderActivityLogs();
+          this.renderNeighbors();
+          this.renderFriendsTab();
+          this.renderGuestbook();
+          this.sound.playChime();
+          this.showToast(`「${this.state.beaver.name}（${fullId}）」にログインしました！`);
+        } finally {
+          if (statusMsgEl) {
+            statusMsgEl.classList.add('hidden');
+          }
         }
-
-        const currentUid = this.storage.uid || this.state.user.uid;
-        const imported = this.storage.normalizeLoadedData(res.data);
-        imported.registered = true;
-        imported.user.uid = currentUid;
-        imported.user.accountId = fullId;
-        imported.user.transferCode = code;
-
-        this.state = imported;
-        this.visitingTarget = null;
-        this.pendingStartAccountId = fullId;
-        this.pendingStartTransferCode = code;
-        this.pendingBeaverCustom = {
-          color: this.state.beaver.color,
-          headSize: this.state.beaver.bodyStyle.headSize,
-          waistSize: this.state.beaver.bodyStyle.waistSize,
-          tailLength: this.state.beaver.bodyStyle.tailLength,
-          tailSize: this.state.beaver.bodyStyle.tailSize
-        };
-
-        this.syncMaxStamina(false);
-        this.addActivityLog(`引き継ぎコードで「${this.state.beaver.name}（ID: ${fullId}）」のデータを読み込みました！`, '#ico-sparkle');
-        await this.storage.saveGameData(this.state);
-        this.neighbors = await this.storage.fetchNeighbors();
-
-        const transferModal = document.getElementById('transfer-modal-overlay');
-        if (transferModal) transferModal.classList.add('hidden');
-
-        this.syncStartScreenState();
-        this.updateUI();
-        this.renderActivityLogs();
-        this.renderNeighbors();
-        this.renderFriendsTab();
-        this.renderGuestbook();
-        this.sound.playChime();
-        this.showToast(`「${this.state.beaver.name}（${fullId}）」のデータを読み込みました！`);
       }
 
       openTransferModal() {
@@ -1917,8 +1973,12 @@
         const codeEl = document.getElementById('modal-my-transfer-code');
         const toggleBtn = document.getElementById('btn-toggle-modal-secret');
         if (idEl) idEl.textContent = this.formatSecretId(this.state.user.accountId);
-        if (codeEl) codeEl.textContent = this.formatSecretCode(this.state.user.transferCode || '00000000');
+        if (codeEl) codeEl.textContent = this.formatSecretCode(this.state.user.transferCode);
         if (toggleBtn) toggleBtn.textContent = this.secretsVisible ? '非表示にする' : '表示する';
+        const p1 = document.getElementById('input-modal-new-pass-1');
+        const p2 = document.getElementById('input-modal-new-pass-2');
+        if (p1) p1.value = '';
+        if (p2) p2.value = '';
         const inId = document.getElementById('input-modal-transfer-id');
         const inCode = document.getElementById('input-modal-transfer-code');
         if (inId) inId.value = '';
@@ -2129,10 +2189,6 @@
         if (previewIdEl) {
           previewIdEl.textContent = this.formatSecretId(this.pendingStartAccountId || this.state.user.accountId, true);
         }
-        const previewCodeEl = document.getElementById('start-preview-code');
-        if (previewCodeEl) {
-          previewCodeEl.textContent = this.formatSecretCode(this.pendingStartTransferCode || this.state.user.transferCode || '00000000', true);
-        }
         const ownerInput = document.getElementById('input-start-owner');
         const beaverInput = document.getElementById('input-start-beaver');
         if (ownerInput && this.state.user.ownerName && this.state.user.ownerName !== 'あなた') {
@@ -2140,6 +2196,14 @@
         }
         if (beaverInput && this.state.beaver.name) {
           beaverInput.value = this.state.beaver.name;
+        }
+        const p1Input = document.getElementById('input-start-pass-1');
+        const p2Input = document.getElementById('input-start-pass-2');
+        if (p1Input && !p1Input.value && /^\d{8}$/.test(String(this.pendingStartTransferCode || ''))) {
+          p1Input.value = this.pendingStartTransferCode;
+        }
+        if (p2Input && !p2Input.value && /^\d{8}$/.test(String(this.pendingStartTransferCode || ''))) {
+          p2Input.value = this.pendingStartTransferCode;
         }
         this.renderStartCustomizationOptions();
         const isRegistered = Boolean(this.state.registered);
@@ -2872,6 +2936,19 @@
 
         on('btn-toggle-secret-visibility', 'click', () => this.toggleSecretVisibility());
         on('btn-toggle-modal-secret', 'click', () => this.toggleSecretVisibility());
+        on('btn-toggle-reset-pass-visibility', 'click', () => {
+          const p1 = document.getElementById('input-modal-new-pass-1');
+          const p2 = document.getElementById('input-modal-new-pass-2');
+          const btn = document.getElementById('btn-toggle-reset-pass-visibility');
+          if (!p1 || !p2) return;
+          const nextType = p1.type === 'password' ? 'text' : 'password';
+          p1.type = nextType;
+          p2.type = nextType;
+          if (btn) {
+            btn.textContent = nextType === 'text' ? 'パスワード隠す' : 'パスワード表示';
+          }
+          this.sound.playPop(420);
+        });
 
         on('btn-open-transfer-modal', 'click', () => this.openTransferModal());
         on('btn-close-transfer-modal', 'click', () => {
@@ -2880,22 +2957,40 @@
         });
 
         on('btn-copy-transfer-pair', 'click', () => {
-          const code = this.state.user.transferCode || '00000000';
-          const pairText = `アカウントID: ${this.state.user.accountId} / 引き継ぎコード: ${code}`;
-          this.copyToClipboard(pairText, 'アカウントIDと引き継ぎコードをコピーしました');
+          const code = this.state.user.transferCode || '未設定';
+          const pairText = `アカウントID: ${this.state.user.accountId} / 8桁パスワード: ${code}`;
+          this.copyToClipboard(pairText, 'アカウントIDと8桁パスワードをコピーしました');
+        });
+
+        ['input-modal-new-pass-1', 'input-modal-new-pass-2', 'input-start-pass-1', 'input-start-pass-2'].forEach((id) => {
+          const inp = document.getElementById(id);
+          if (inp) {
+            inp.addEventListener('input', (e) => {
+              const digits = e.target.value.replace(/[^0-9]/g, '').slice(0, 8);
+              if (e.target.value !== digits) e.target.value = digits;
+            });
+          }
         });
 
         on('btn-reissue-transfer-code', 'click', async () => {
-          const newCode = this.storage.generateTransferCode();
-          this.state.user.transferCode = newCode;
-          this.pendingStartTransferCode = newCode;
+          const p1 = document.getElementById('input-modal-new-pass-1') ? document.getElementById('input-modal-new-pass-1').value : '';
+          const p2 = document.getElementById('input-modal-new-pass-2') ? document.getElementById('input-modal-new-pass-2').value : '';
+          const chk = this.validateTwoStepPassword8(p1, p2);
+          if (!chk.ok) {
+            this.showToast(chk.message);
+            return;
+          }
+          this.state.user.transferCode = chk.password8;
+          this.pendingStartTransferCode = chk.password8;
           const codeEl = document.getElementById('modal-my-transfer-code');
-          if (codeEl) codeEl.textContent = this.formatSecretCode(newCode);
-          this.addActivityLog(`引き継ぎコード（8桁）を再発行しました`, '#ico-edit');
+          if (codeEl) codeEl.textContent = this.formatSecretCode(chk.password8);
+          if (document.getElementById('input-modal-new-pass-1')) document.getElementById('input-modal-new-pass-1').value = '';
+          if (document.getElementById('input-modal-new-pass-2')) document.getElementById('input-modal-new-pass-2').value = '';
+          this.addActivityLog('8桁パスワードを2段階確認で更新しました', '#ico-edit');
           await this.storage.saveGameData(this.state);
           this.updateUI();
-          this.sound.playPop(460);
-          this.showToast(`新しい8桁の引き継ぎコードを発行しました`);
+          this.sound.playChime();
+          this.showToast('新しい8桁パスワードを更新しました');
         });
 
         const modalTrId = document.getElementById('input-modal-transfer-id');
@@ -2940,8 +3035,15 @@
             e.preventDefault();
             const ownerVal = (document.getElementById('input-start-owner').value || '').trim();
             const beaverVal = (document.getElementById('input-start-beaver').value || '').trim();
+            const p1Val = document.getElementById('input-start-pass-1') ? document.getElementById('input-start-pass-1').value : '';
+            const p2Val = document.getElementById('input-start-pass-2') ? document.getElementById('input-start-pass-2').value : '';
             if (!ownerVal || !beaverVal) {
               this.showToast('飼い主の名前とビーバーの名前をどちらも入力してください');
+              return;
+            }
+            const passCheck = this.validateTwoStepPassword8(p1Val, p2Val);
+            if (!passCheck.ok) {
+              this.showToast(passCheck.message);
               return;
             }
             this.state.user.ownerName = ownerVal.slice(0, 12);
@@ -2952,7 +3054,7 @@
               return;
             }
             this.state.user.accountId = await this.storage.reserveUniqueAccountId(desiredId, this.state.user.uid);
-            this.state.user.transferCode = this.pendingStartTransferCode || this.state.user.transferCode || this.storage.generateTransferCode();
+            this.state.user.transferCode = passCheck.password8;
             await this.storage.acquireOrRenewSessionLock(this.state.user.accountId);
             this.pendingStartAccountId = this.state.user.accountId;
             this.pendingStartTransferCode = this.state.user.transferCode;
@@ -3039,15 +3141,26 @@
         });
 
         on('btn-reset-save', 'click', () => {
+          const hasPass = /^\d{8}$/.test(String(this.state.user.transferCode || '').trim());
           this.openModal({
             title: 'セーブデータの初期化',
-            desc: 'これまでの成長記録やアイテムがすべてリセットされ、スタート登録画面に戻ります。よろしいですか？',
+            desc: hasPass
+              ? 'データを初期化するには、最初に設定した8桁のパスワードを入力してください。'
+              : 'これまでの成長記録やアイテムがすべてリセットされ、スタート登録画面に戻ります。よろしいですか？',
             showInput: false,
-            onConfirm: async () => {
+            showPasswordInput: hasPass,
+            onConfirm: async (_val, enteredPass) => {
+              if (hasPass) {
+                const norm = String(enteredPass || '').replace(/[^0-9]/g, '').slice(0, 8);
+                if (norm !== String(this.state.user.transferCode).trim()) {
+                  this.showToast('8桁のパスワードが一致しないため、初期化をキャンセルしました');
+                  return;
+                }
+              }
               await this.storage.releaseSessionLock();
               this.state = await this.storage.resetGameData();
               this.pendingStartAccountId = this.state.user.accountId;
-              this.pendingStartTransferCode = this.state.user.transferCode;
+              this.pendingStartTransferCode = '';
               this.pendingBeaverCustom = {
                 color: this.state.beaver.color,
                 headSize: this.state.beaver.bodyStyle.headSize,
@@ -3226,10 +3339,10 @@
         setText('ui-beaver-name', activeBeaver.name);
         setText('ui-owner-name', isVisit ? this.visitingTarget.ownerName : this.state.user.ownerName);
         setText('ui-my-account-id', this.formatSecretId(this.state.user.accountId));
-        setText('ui-my-transfer-code', this.formatSecretCode(this.state.user.transferCode || '00000000'));
+        setText('ui-my-transfer-code', this.formatSecretCode(this.state.user.transferCode));
         setText('ui-friends-badge', this.state.user.favoriteIds.length);
         setText('ui-favorite-count-label', `お気に入り: ${this.state.user.favoriteIds.length}人`);
-        setText('ui-secret-visibility-label', this.secretsVisible ? 'ID・引継を隠す' : 'ID・引継を表示');
+        setText('ui-secret-visibility-label', this.secretsVisible ? 'ID・パスを隠す' : 'ID・パスを表示');
         const badge = document.getElementById('ui-stage-badge');
         if (badge) {
           badge.textContent = stage.label;
@@ -3440,9 +3553,10 @@
         document.getElementById('tab-guestbook').className = isGuestbook ? activeCls : idleCls;
       }
 
-      openModal({ title, desc, showInput, defaultValue = '', onConfirm }) {
+      openModal({ title, desc, showInput, showPasswordInput = false, defaultValue = '', onConfirm }) {
         const overlay = document.getElementById('modal-overlay');
         const input = document.getElementById('modal-input');
+        const passInput = document.getElementById('modal-password-input');
         document.getElementById('modal-title').textContent = title;
         document.getElementById('modal-desc').textContent = desc;
 
@@ -3453,13 +3567,28 @@
           input.classList.add('hidden');
         }
 
+        if (passInput) {
+          if (showPasswordInput) {
+            passInput.classList.remove('hidden');
+            passInput.value = '';
+          } else {
+            passInput.classList.add('hidden');
+            passInput.value = '';
+          }
+          passInput.oninput = (e) => {
+            const digits = e.target.value.replace(/[^0-9]/g, '').slice(0, 8);
+            if (e.target.value !== digits) e.target.value = digits;
+          };
+        }
+
         overlay.classList.remove('hidden');
 
         const close = () => overlay.classList.add('hidden');
         document.getElementById('modal-cancel').onclick = close;
         document.getElementById('modal-confirm').onclick = () => {
+          const pv = passInput ? passInput.value : '';
           close();
-          onConfirm(input.value);
+          onConfirm(input.value, pv);
         };
       }
 
@@ -4294,378 +4423,326 @@
         if (isSleeping) {
           ctx.lineCap = 'round';
           ctx.beginPath();
-          ctx.moveTo(eyeX - 3.6, eyeY - 0.3);
-          ctx.quadraticCurveTo(eyeX, eyeY + 2.2, eyeX + 3.6, eyeY - 0.3);
+          ctx.moveTo(eyeX - 3.4, eyeY + 0.6);
+          ctx.quadraticCurveTo(eyeX, eyeY + 2.6, eyeX + 3.4, eyeY + 0.6);
           ctx.stroke();
-        } else if (isHappy || isEating) {
+        } else if (isRefusing || isBlinking) {
+          ctx.lineCap = 'round';
           ctx.beginPath();
-          ctx.arc(eyeX, eyeY + 1, 3.4, Math.PI, 0);
+          ctx.moveTo(eyeX - 3.3, eyeY);
+          ctx.lineTo(eyeX + 3.3, eyeY);
           ctx.stroke();
-        } else if (isBlinking) {
+        } else if (isHappy) {
+          ctx.lineCap = 'round';
           ctx.beginPath();
-          ctx.arc(eyeX, eyeY - 0.5, 3.3, 0.15 * Math.PI, 0.85 * Math.PI);
+          ctx.arc(eyeX, eyeY + 1.2, 3.0, Math.PI * 1.15, Math.PI * 1.85);
+          ctx.stroke();
+        } else if (sadLevel >= 2) {
+          ctx.beginPath();
+          ctx.arc(eyeX, eyeY + 0.8, 2.7, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.arc(eyeX + 0.9, eyeY, 0.95, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = '#78350f';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(eyeX - 3.5, eyeY - 5.2);
+          ctx.lineTo(eyeX + 2.5, eyeY - 3.6);
           ctx.stroke();
         } else {
           ctx.beginPath();
-          ctx.arc(eyeX, eyeY, 2.6, 0, Math.PI * 2);
+          ctx.arc(eyeX, eyeY, 2.9, 0, Math.PI * 2);
           ctx.fill();
-
           ctx.fillStyle = '#ffffff';
           ctx.beginPath();
-          ctx.arc(eyeX + 0.9, eyeY - 0.9, 0.9, 0, Math.PI * 2);
+          ctx.arc(eyeX + 1.0, eyeY - 0.9, 1.05, 0, Math.PI * 2);
           ctx.fill();
-
-          if (sadLevel >= 3) {
-            ctx.fillStyle = '#38bdf8';
-            ctx.beginPath();
-            ctx.arc(eyeX + 2.2, eyeY + 2.2, 1.3, 0, Math.PI * 2);
-            ctx.fill();
-          }
-
-          if (sadLevel >= 1) {
-            ctx.strokeStyle = '#3b1d0c';
-            ctx.lineWidth = 1.6;
-            ctx.beginPath();
-            const browDroop = sadLevel * 1.1;
-            ctx.moveTo(eyeX - 3.2, eyeY - 4.5 - browDroop * 0.4);
-            ctx.lineTo(eyeX + 3.4, eyeY - 4.0 + browDroop);
-            ctx.stroke();
-          }
         }
 
+        if (isEating) {
+          ctx.fillStyle = '#ef4444';
+          ctx.beginPath();
+          ctx.arc(21.5, 6.2 + Math.sin(this.time * 20) * 1.5, 4.4, 0, Math.PI * 2);
+          ctx.fill();
+        }
         ctx.restore();
 
         ctx.save();
         const frontArmSwing = isWorking
-          ? -3 + Math.sin(this.time * 18) * 5.5
+          ? Math.sin(this.time * 18) * 6.5
           : isHappy
-            ? -7 + Math.cos(this.time * 12) * 3
+            ? -7 - Math.sin(this.time * 12) * 3
             : sadLevel >= 2
-              ? 3.5
-              : Math.cos(this.time * 3) * 1.5;
-        ctx.translate(10.5, 2.0 + frontArmSwing);
-        ctx.rotate(isHappy ? -0.6 : isWorking ? -0.35 : sadLevel >= 2 ? 0.45 : 0.18);
-
+              ? 3.8
+              : -Math.sin(this.time * 3) * 1.5;
+        ctx.translate(10.5 * metrics.waistScaleX, 0.5 * metrics.waistScaleY + frontArmSwing);
+        ctx.rotate(isHappy ? -0.65 : isWorking ? -0.35 : sadLevel >= 2 ? 0.55 : 0.2);
         ctx.fillStyle = furColor;
         ctx.beginPath();
-        ctx.moveTo(-3.5, -3.5);
-        ctx.quadraticCurveTo(4.0, -5.0, 9.5, -1.0);
-        ctx.quadraticCurveTo(11.5, 3.0, 7.5, 5.5);
-        ctx.quadraticCurveTo(1.5, 6.0, -3.5, 3.5);
-        ctx.closePath();
+        ctx.ellipse(4.5, 1.5, 6.8, 4.6, 0.15, 0, Math.PI * 2);
         ctx.fill();
-
-        ctx.strokeStyle = 'rgba(41, 18, 6, 0.35)';
-        ctx.lineWidth = 0.95;
+        ctx.fillStyle = 'rgba(251, 182, 206, 0.65)';
         ctx.beginPath();
-        ctx.moveTo(0.5, -1.5);
-        ctx.lineTo(5.5, -0.5);
-        ctx.moveTo(0.5, 1.5);
-        ctx.lineTo(5.5, 2.2);
-        ctx.stroke();
-
-        ctx.fillStyle = '#5c3317';
-        ctx.beginPath();
-        ctx.ellipse(9.5, 1.5, 4.2, 3.8, 0.1, 0, Math.PI * 2);
+        ctx.ellipse(9.8, 2.5, 3.2, 2.4, 0, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = '#291206';
-        ctx.lineWidth = 1.15;
-        ctx.lineCap = 'round';
+        ctx.strokeStyle = '#3b1d0c';
+        ctx.lineWidth = 1.1;
         ctx.beginPath();
-        ctx.moveTo(12.5, -0.8);
-        ctx.lineTo(15.2, -1.5);
-        ctx.moveTo(13.2, 1.5);
-        ctx.lineTo(15.8, 1.5);
-        ctx.moveTo(12.5, 3.8);
-        ctx.lineTo(15.2, 4.5);
+        ctx.moveTo(12, 0.5);
+        ctx.lineTo(14.5, 0);
+        ctx.moveTo(12.5, 2.5);
+        ctx.lineTo(15, 2.5);
+        ctx.moveTo(12, 4.5);
+        ctx.lineTo(14.5, 5);
         ctx.stroke();
-
         ctx.restore();
+
         ctx.restore();
       }
 
-      drawBeaverFront(ctx, x, y, scale, furColor, { isHappy, isEating, isRefusing, isBlinking, sadLevel, metrics = null }) {
-        const m = metrics || this.getBodyMetrics(null);
+      drawBeaverFront(ctx, x, y, scale, furColor, opts) {
+        const { isHappy, isEating, isRefusing, isBlinking, sadLevel, metrics } = opts;
         ctx.save();
         ctx.translate(x, y);
         ctx.scale(scale, scale);
 
-        let refuseWave = 0;
-        if (isRefusing) {
-          const dur = this.beaverAnim.refuseDuration || 120;
-          const progress = Math.min(1, Math.max(0, 1 - (this.beaverAnim.actionTimer / dur)));
-          refuseWave = Math.sin(progress * Math.PI * 4);
-        }
-        const refuseShakeX = isRefusing ? refuseWave * 4.5 : 0;
-        const headTilt = isRefusing ? refuseWave * 0.22 : 0;
+        const refuseWave = isRefusing
+          ? Math.sin(Math.min(1, Math.max(0, 1 - (this.beaverAnim.actionTimer / (this.beaverAnim.refuseDuration || 120)))) * Math.PI * 4)
+          : 0;
+        const bodySwayX = isRefusing ? refuseWave * 5.0 : Math.sin(this.time * 2.4) * 1.4;
+        ctx.translate(bodySwayX, 0);
 
         ctx.save();
-        const tailWag = Math.sin(this.time * (isHappy ? 14 : 4)) * 0.14;
-        ctx.translate(15 * m.waistScaleX, 6.5 * m.waistScaleY);
-        ctx.rotate(0.45 + tailWag);
-        ctx.scale(m.tailLengthScale, m.tailThicknessScale);
+        const tailWag = isHappy ? Math.sin(this.time * 14) * 0.22 : Math.sin(this.time * 4) * 0.12;
+        ctx.translate(0, 14 * metrics.waistScaleY);
+        ctx.rotate(tailWag);
+        ctx.scale(metrics.tailThicknessScale, metrics.tailLengthScale);
         ctx.fillStyle = '#451a03';
         ctx.beginPath();
-        ctx.ellipse(12.5, 0, 17, 8, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, 5.5, 11.5, 6.5, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.strokeStyle = '#78350f';
         ctx.lineWidth = 1.1;
         ctx.beginPath();
-        ctx.moveTo(4, -3);
-        ctx.lineTo(20, 3);
-        ctx.moveTo(4, 3);
-        ctx.lineTo(20, -3);
+        ctx.moveTo(-6, 3.5);
+        ctx.lineTo(6, 7.5);
+        ctx.moveTo(-6, 7.5);
+        ctx.lineTo(6, 3.5);
         ctx.stroke();
         ctx.restore();
 
         ctx.save();
-        ctx.scale(m.waistScaleX, m.waistScaleY);
+        ctx.scale(metrics.waistScaleX, metrics.waistScaleY);
         ctx.fillStyle = furColor;
         ctx.beginPath();
-        ctx.moveTo(0, -12.5);
-        ctx.bezierCurveTo(13, -12.5, 22.5, -1, 21.5, 9.5);
-        ctx.bezierCurveTo(20.5, 18.5, 11, 21.5, 0, 21.5);
-        ctx.bezierCurveTo(-11, 21.5, -20.5, 18.5, -21.5, 9.5);
-        ctx.bezierCurveTo(-22.5, -1, -13, -12.5, 0, -12.5);
-        ctx.closePath();
+        ctx.ellipse(0, 5.5, 17.5, 13.5, 0, 0, Math.PI * 2);
         ctx.fill();
 
         ctx.fillStyle = '#fde68a';
         ctx.beginPath();
-        ctx.ellipse(0, 7.5, 11.5, 10.5, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, 7.2, 11.2, 9.2, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
 
-        [-1, 1].forEach((side) => {
+        [-11.5, 11.5].forEach((fx, idx) => {
           ctx.save();
-          ctx.translate(side * 13 * m.waistScaleX, 17 * m.waistScaleY);
-          ctx.rotate(side * 0.25);
+          ctx.translate(fx * metrics.waistScaleX, 16.5 * metrics.waistScaleY);
+          ctx.rotate((idx === 0 ? -0.18 : 0.18) + Math.sin(this.time * 3 + idx) * 0.06);
           ctx.fillStyle = '#5c3317';
           ctx.beginPath();
-          ctx.ellipse(0, 2, 8.5, 5.2, 0, 0, Math.PI * 2);
+          ctx.ellipse(0, 1.5, 6.2, 4.2, 0, 0, Math.PI * 2);
           ctx.fill();
-          ctx.fillStyle = 'rgba(251, 182, 206, 0.6)';
+          ctx.fillStyle = 'rgba(251, 182, 206, 0.65)';
           ctx.beginPath();
-          ctx.ellipse(0, 2.5, 4, 2.2, 0, 0, Math.PI * 2);
+          ctx.ellipse(0, 2.2, 3.1, 2.0, 0, 0, Math.PI * 2);
           ctx.fill();
           ctx.restore();
         });
 
-        [-1, 1].forEach((side) => {
-          ctx.save();
-          const armWave = isRefusing
-            ? refuseWave * side * 3.2
+        [-14.5, 14.5].forEach((ax, idx) => {
+          const dir = idx === 0 ? -1 : 1;
+          const armAngle = isRefusing
+            ? dir * (0.55 + Math.abs(refuseWave) * 0.35)
             : isHappy
-              ? -5 + Math.sin(this.time * 12) * 2.5
-              : Math.sin(this.time * 3 + side) * 1.2;
-          ctx.translate(side * 15 * m.waistScaleX, 1 + armWave);
-          ctx.rotate(side * (isRefusing ? -0.45 : isHappy ? -0.5 : 0.25));
+              ? dir * (-0.75 + Math.sin(this.time * 12) * 0.18)
+              : dir * (0.28 + Math.sin(this.time * 3) * 0.06);
+          ctx.save();
+          ctx.translate(ax * metrics.waistScaleX, 1.2 * metrics.waistScaleY);
+          ctx.rotate(armAngle);
           ctx.fillStyle = furColor;
           ctx.beginPath();
-          ctx.ellipse(side * 2, 1, 6.8, 4.8, 0, 0, Math.PI * 2);
+          ctx.ellipse(dir * 3.5, 2.5, 5.5, 3.8, dir * 0.25, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = 'rgba(251, 182, 206, 0.7)';
+          ctx.beginPath();
+          ctx.arc(dir * 7.8, 3.8, 2.4, 0, Math.PI * 2);
           ctx.fill();
           ctx.restore();
         });
 
         ctx.save();
-        ctx.translate(refuseShakeX, -10.8 * m.waistScaleY + sadLevel * 1.1);
-        ctx.scale(m.headScale, m.headScale);
-        ctx.rotate(headTilt);
+        ctx.translate(0, -10.5 * metrics.waistScaleY + sadLevel * 0.9);
+        ctx.scale(metrics.headScale, metrics.headScale);
+        ctx.rotate(isRefusing ? refuseWave * 0.24 : Math.sin(this.time * 2.4) * 0.03);
 
-        [-1, 1].forEach((side) => {
+        [-13.5, 13.5].forEach((ex, idx) => {
+          const dir = idx === 0 ? -1 : 1;
           ctx.save();
-          ctx.translate(side * 16.5, -3.8 + sadLevel * 0.8);
-          ctx.rotate(side * (0.62 + sadLevel * 0.12));
+          ctx.translate(ex, -8.5);
+          ctx.rotate(dir * 0.35);
           ctx.fillStyle = '#5c3317';
           ctx.beginPath();
-          ctx.moveTo(-3.8, 2.2);
-          ctx.quadraticCurveTo(-2.1, -2.8, -1.2, -4.4);
-          ctx.quadraticCurveTo(0, -5.6, 1.2, -4.4);
-          ctx.quadraticCurveTo(2.1, -2.8, 3.8, 2.2);
-          ctx.quadraticCurveTo(0, 3.0, -3.8, 2.2);
-          ctx.closePath();
+          ctx.ellipse(0, 0, 5.2, 3.6, 0, 0, Math.PI * 2);
           ctx.fill();
-
           ctx.fillStyle = '#f9a8d4';
           ctx.beginPath();
-          ctx.moveTo(-1.8, 1.3);
-          ctx.quadraticCurveTo(-0.9, -1.5, -0.5, -2.4);
-          ctx.quadraticCurveTo(0, -3.1, 0.5, -2.4);
-          ctx.quadraticCurveTo(0.9, -1.5, 1.8, 1.3);
-          ctx.quadraticCurveTo(0, 1.8, -1.8, 1.3);
-          ctx.closePath();
+          ctx.ellipse(0, 0.2, 3.0, 2.0, 0, 0, Math.PI * 2);
           ctx.fill();
           ctx.restore();
         });
 
         ctx.fillStyle = furColor;
         ctx.beginPath();
-        ctx.ellipse(0, 0, 19, 17, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, 0, 15.2, 12.8, 0, 0, Math.PI * 2);
         ctx.fill();
-
-        ctx.strokeStyle = 'rgba(41, 18, 6, 0.32)';
-        ctx.lineWidth = 1.05;
-        ctx.lineCap = 'round';
-        [-12, -7, 7, 12].forEach((hx) => {
-          ctx.beginPath();
-          ctx.moveTo(hx, -10);
-          ctx.lineTo(hx * 1.05, -5);
-          ctx.stroke();
-        });
 
         ctx.fillStyle = '#fde68a';
         ctx.beginPath();
-        ctx.ellipse(0, 5.5, 11.5, 7.5, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, 4.6, 8.8, 6.2, 0, 0, Math.PI * 2);
         ctx.fill();
 
         ctx.fillStyle = '#ffffff';
         ctx.strokeStyle = '#d6d3d1';
         ctx.lineWidth = 0.9;
         ctx.beginPath();
-        ctx.roundRect(-3.6, 8.2, 3.3, 8.1, 1.2);
-        ctx.roundRect(0.3, 8.2, 3.3, 8.1, 1.2);
+        ctx.roundRect(-3.4, 8.2, 3.1, 6.8, 1.1);
+        ctx.roundRect(0.3, 8.2, 3.1, 6.8, 1.1);
         ctx.fill();
         ctx.stroke();
 
-        if (isRefusing) {
-          ctx.strokeStyle = '#451a03';
-          ctx.lineWidth = 1.7;
-          ctx.lineCap = 'round';
-          ctx.beginPath();
-          ctx.moveTo(-6, 7.5);
-          ctx.quadraticCurveTo(-3, 5.5, 0, 7.5);
-          ctx.quadraticCurveTo(3, 5.5, 6, 7.5);
-          ctx.stroke();
-        }
-
         ctx.fillStyle = '#292524';
         ctx.beginPath();
-        ctx.ellipse(0, 1.5, 4.2, 2.8, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, 2.6, 3.6, 2.4, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        ctx.fillStyle = sadLevel >= 2 ? 'rgba(147, 197, 253, 0.35)' : 'rgba(244, 63, 94, 0.35)';
-        ctx.beginPath();
-        ctx.arc(-13.8, 1.6, 3.4, 0, Math.PI * 2);
-        ctx.arc(13.8, 1.6, 3.4, 0, Math.PI * 2);
-        ctx.fill();
+        [-10.2, 10.2].forEach((cx) => {
+          ctx.fillStyle = sadLevel >= 2 ? 'rgba(147, 197, 253, 0.35)' : 'rgba(244, 63, 94, 0.34)';
+          ctx.beginPath();
+          ctx.arc(cx, 3.8, 3.3, 0, Math.PI * 2);
+          ctx.fill();
+        });
 
-        const whiskerTwitch = isHappy ? Math.sin(this.time * 22) * 1.5 : Math.sin(this.time * 4) * 0.4;
-        const whiskerDroop = sadLevel * 1.3;
+        const whiskerTwitch = isHappy ? Math.sin(this.time * 22) * 1.3 : Math.sin(this.time * 4) * 0.3;
+        const whiskerDroop = sadLevel * 1.1;
         ctx.strokeStyle = '#451a03';
-        ctx.lineWidth = 1.35;
+        ctx.lineWidth = 1.25;
         ctx.lineCap = 'round';
-
-        [-1, 1].forEach((side) => {
-          [-0.2, 0.04, 0.28].forEach((ang, idx) => {
+        [-1, 1].forEach((dir) => {
+          [-0.22, 0.02, 0.24].forEach((ang, idx) => {
+            const sx = dir * 6.8;
+            const sy = 2.6 + idx * 1.3;
+            const ex = dir * (16.8 + idx * 0.8);
+            const ey = sy + Math.sin(ang) * 7.5 + whiskerDroop + dir * whiskerTwitch * 0.5;
             ctx.beginPath();
-            const startX = side * 7.5;
-            const startY = 2.8 + idx * 1.5;
-            const endX = side * (19 + idx * 1.2);
-            const endY = startY + Math.sin(ang) * 10 + whiskerDroop + whiskerTwitch * 0.8;
-            ctx.moveTo(startX, startY);
-            ctx.quadraticCurveTo((startX + endX) * 0.5, startY - 1.2 + whiskerDroop * 0.4, endX, endY);
+            ctx.moveTo(sx, sy);
+            ctx.quadraticCurveTo((sx + ex) * 0.5, sy - 0.8, ex, ey);
             ctx.stroke();
           });
         });
 
-        [-1, 1].forEach((side) => {
-          const ex = side * 7.8;
-          const ey = -3.4;
+        [-6.2, 6.2].forEach((ex, idx) => {
+          const ey = -2.2;
           ctx.strokeStyle = '#1c1917';
           ctx.fillStyle = '#1c1917';
           ctx.lineWidth = 2.1;
+          ctx.lineCap = 'round';
 
-          if (isRefusing) {
+          if (isRefusing || isBlinking) {
             ctx.beginPath();
-            ctx.moveTo(ex - side * 3, ey - 2.5);
-            ctx.lineTo(ex + side * 2, ey);
-            ctx.lineTo(ex - side * 3, ey + 2.5);
+            ctx.moveTo(ex - 3.1, ey);
+            ctx.lineTo(ex + 3.1, ey);
             ctx.stroke();
-          } else if (isHappy || isEating) {
+          } else if (isHappy) {
             ctx.beginPath();
-            ctx.arc(ex, ey + 1, 3.3, Math.PI, 0);
-            ctx.stroke();
-          } else if (isBlinking) {
-            ctx.beginPath();
-            ctx.arc(ex, ey - 0.5, 3.2, 0.15 * Math.PI, 0.85 * Math.PI);
+            ctx.arc(ex, ey + 1.2, 2.9, Math.PI * 1.15, Math.PI * 1.85);
             ctx.stroke();
           } else {
             ctx.beginPath();
-            ctx.arc(ex, ey, 2.7, 0, Math.PI * 2);
+            ctx.arc(ex, ey, 2.8, 0, Math.PI * 2);
             ctx.fill();
             ctx.fillStyle = '#ffffff';
             ctx.beginPath();
-            ctx.arc(ex + 0.9, ey - 0.9, 0.95, 0, Math.PI * 2);
+            ctx.arc(ex + 1.0, ey - 0.9, 1.0, 0, Math.PI * 2);
             ctx.fill();
+          }
 
-            if (sadLevel >= 3) {
-              ctx.fillStyle = '#38bdf8';
-              ctx.beginPath();
-              ctx.arc(ex + side * 2.2, ey + 2, 1.2, 0, Math.PI * 2);
-              ctx.fill();
-            }
-
-            if (sadLevel >= 1) {
-              ctx.strokeStyle = '#3b1d0c';
-              ctx.lineWidth = 1.6;
-              ctx.beginPath();
-              const browTilt = sadLevel * 1.1;
-              ctx.moveTo(ex - side * 3.2, ey - 4.5 - browTilt * 0.5);
-              ctx.lineTo(ex + side * 3.2, ey - 4.2 + browTilt);
-              ctx.stroke();
-            }
+          if (isRefusing) {
+            const dir = idx === 0 ? -1 : 1;
+            ctx.strokeStyle = '#78350f';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(ex - dir * 3.0, ey - 4.5);
+            ctx.lineTo(ex + dir * 2.6, ey - 6.2);
+            ctx.stroke();
           }
         });
 
+        if (isEating) {
+          ctx.fillStyle = '#ef4444';
+          ctx.beginPath();
+          ctx.arc(0, 12.2 + Math.sin(this.time * 20) * 1.2, 4.0, 0, Math.PI * 2);
+          ctx.fill();
+        }
         ctx.restore();
+
         ctx.restore();
       }
     }
 
-    window.addEventListener('DOMContentLoaded', () => {
+    window.addEventListener('DOMContentLoaded', async () => {
+      const game = new BeaverGame();
+      window.__BEAVER_GAME__ = game;
+
       const fb = window.__BEAVER_FIREBASE__;
-      let started = false;
+      if (fb && fb.ready && fb.auth && typeof fb.onAuthStateChanged === 'function') {
+        let authResolved = false;
+        const authPromise = new Promise((resolve) => {
+          const timeoutId = setTimeout(() => {
+            if (!authResolved) {
+              authResolved = true;
+              resolve(null);
+            }
+          }, 2500);
 
-      const bootGame = async (uid = null) => {
-        if (started) return;
-        started = true;
-        const game = new BeaverGame();
-        if (uid && typeof game.storage.setUserId === 'function') {
-          game.storage.setUserId(uid);
-        }
-        await game.init();
-      };
-
-      if (!fb || !fb.ready || !fb.auth) {
-        bootGame(null);
-        return;
-      }
-
-      const fallbackTimer = setTimeout(() => {
-        bootGame(null);
-      }, 2000);
-
-      try {
-        if (typeof fb.onAuthStateChanged === 'function') {
           fb.onAuthStateChanged(fb.auth, (user) => {
-            if (user && user.uid) {
-              clearTimeout(fallbackTimer);
-              bootGame(user.uid);
+            if (user && user.uid && !authResolved) {
+              authResolved = true;
+              clearTimeout(timeoutId);
+              resolve(user.uid);
             }
           });
+
+          if (typeof fb.signInAnonymously === 'function') {
+            fb.signInAnonymously(fb.auth).catch((err) => {
+              console.warn('匿名認証に失敗しました:', err);
+              if (!authResolved) {
+                authResolved = true;
+                clearTimeout(timeoutId);
+                resolve(null);
+              }
+            });
+          }
+        });
+
+        const uid = await authPromise;
+        if (uid) {
+          game.storage.setUserId(uid);
         }
-        if (typeof fb.signInAnonymously === 'function') {
-          fb.signInAnonymously(fb.auth).catch((err) => {
-            console.warn('Firebase匿名サインインに失敗（ローカル保存で起動）:', err);
-            clearTimeout(fallbackTimer);
-            bootGame(null);
-          });
-        }
-      } catch (err) {
-        console.warn('Firebase認証処理で例外発生（ローカル保存で起動）:', err);
-        clearTimeout(fallbackTimer);
-        bootGame(null);
       }
+
+      await game.init();
     });
   </script>
 </body>
