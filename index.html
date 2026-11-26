@@ -398,6 +398,9 @@
                   <svg class="w-3.5 h-3.5"><use href="#ico-edit"/></svg>
                   <span>変更</span>
                 </button>
+                <button type="button" id="btn-visit-favorite" title="お気に入り登録・解除" class="hidden px-2.5 py-1 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 text-xs font-extrabold transition inline-flex items-center gap-1 shadow-2xs">
+                  <span>☆ お気に入り登録</span>
+                </button>
                 <span id="ui-stage-badge" class="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-emerald-500 text-white shadow-sm">
                   赤ちゃん
                 </span>
@@ -3589,6 +3592,11 @@ addActivityLog(text, icon = '#ico-sparkle', customTimestamp = Date.now(), extra 
         on('btn-gather', 'click', () => this.handleGatherWood());
         on('btn-build-dam', 'click', () => this.handleBuildDam());
         on('btn-return-home', 'click', () => this.returnHome());
+        on('btn-visit-favorite', 'click', () => {
+          if (this.visitingTarget && this.visitingTarget.uid) {
+            this.toggleFavorite(this.visitingTarget.uid);
+          }
+        });
         on('btn-visit-pet', 'click', () => this.handleVisitPet());
         on('btn-visit-gift', 'click', () => this.handleVisitGift());
 
@@ -3884,17 +3892,26 @@ addActivityLog(text, icon = '#ico-sparkle', customTimestamp = Date.now(), extra 
         const homePanel = document.getElementById('panel-home-actions');
         const visitPanel = document.getElementById('panel-visit-actions');
         const editNameBtn = document.getElementById('btn-edit-name');
+        const visitFavBtn = document.getElementById('btn-visit-favorite');
         const myAccountControls = document.getElementById('ui-my-account-controls');
 
         if (visitBanner) visitBanner.classList.toggle('hidden', !isVisit);
         if (homePanel) homePanel.classList.toggle('hidden', isVisit);
         if (visitPanel) visitPanel.classList.toggle('hidden', !isVisit);
         if (editNameBtn) editNameBtn.classList.toggle('hidden', isVisit);
+        if (visitFavBtn) visitFavBtn.classList.toggle('hidden', !isVisit);
         if (myAccountControls) myAccountControls.classList.toggle('hidden', isVisit);
 
         if (isVisit) {
           setText('visit-owner-name', this.visitingTarget.ownerName);
           setText('visit-beaver-name', this.visitingTarget.beaverName);
+          if (visitFavBtn) {
+            const isFav = Array.isArray(this.state.user.favoriteIds) && this.state.user.favoriteIds.includes(this.visitingTarget.uid);
+            visitFavBtn.innerHTML = isFav ? '<span>★ お気に入り中</span>' : '<span>☆ お気に入り登録</span>';
+            visitFavBtn.className = isFav
+              ? 'px-2.5 py-1 rounded-xl bg-rose-500 hover:bg-rose-600 text-white border border-rose-600 text-xs font-extrabold transition inline-flex items-center gap-1 shadow-2xs'
+              : 'px-2.5 py-1 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 text-xs font-extrabold transition inline-flex items-center gap-1 shadow-2xs';
+          }
         }
       }
 
