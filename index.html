@@ -1151,7 +1151,8 @@
               timestamp: Date.now()
             }
           ],
-          guestbook: []
+          guestbook: [],
+          claimedGiftIds: []
         };
       }
 
@@ -1423,7 +1424,10 @@
             max: 10 + (Math.max(1, Number((safeParsed.beaver && safeParsed.beaver.damLevel) || def.beaver.damLevel)) - 1) * 4
           },
           activityLogs: Array.isArray(safeParsed.activityLogs) ? safeParsed.activityLogs : def.activityLogs,
-          guestbook: Array.isArray(safeParsed.guestbook) ? safeParsed.guestbook : def.guestbook
+          guestbook: Array.isArray(safeParsed.guestbook) ? safeParsed.guestbook : def.guestbook,
+          claimedGiftIds: Array.isArray(safeParsed.claimedGiftIds)
+            ? Array.from(new Set(safeParsed.claimedGiftIds)).slice(-300)
+            : []
         };
       }
 
@@ -1674,34 +1678,14 @@
               visitorName: senderName || '旅人',
               action: actionType,
               woodAmount: safeWood,
+              woodClaimed: false,
+              claimed: false,
               message: actionType === 'gift_wood'
                 ? `${senderName || '旅人'}さんが流木を${safeWood}本おすそわけしてくれました！`
                 : `${senderName || '旅人'}さんがビーバーをなでなでしてくれました♪`,
               timestamp: Date.now(),
               createdAt: fb.serverTimestamp()
             });
-
-            if (safeWood > 0) {
-              const targetRef = fb.doc(fb.db, 'players', neighborUid);
-              await fb.runTransaction(fb.db, async (tx) => {
-                const snap = await tx.get(targetRef);
-                if (!snap.exists()) return;
-                const data = snap.data() || {};
-                const curUserWood = Number((data.user && data.user.wood) ?? (data.publicProfile && data.publicProfile.wood) ?? 0);
-                const nextWood = curUserWood + safeWood;
-                tx.set(targetRef, {
-                  user: {
-                    ...(data.user || {}),
-                    wood: nextWood
-                  },
-                  publicProfile: {
-                    ...(data.publicProfile || {}),
-                    wood: nextWood,
-                    updatedAt: Date.now()
-                  }
-                }, { merge: true });
-              });
-            }
           } catch (err) {
             console.warn('訪問ログ・おすそわけ送信に失敗:', err);
           }
@@ -1915,22 +1899,33 @@
         this._isProcessingGifts = true;
 
         try {
-          if (!Array.isArray(this.state.guestbook)) {
-            this.state.guestbook = [];
-          }
-          if (!Array.isArray(this.state.activityLogs)) {
-            this.state.activityLogs = [];
-          }
-          if (!Array.isArray(this.state.claimedGiftIds)) {
-            this.state.claimedGiftIds = [];
-          }
+          if (!Array.isArray(this.state.guestbook)) this.state.guestbook = [];
+          if (!Array.isArray(this.state.activityLogs)) this.state.activityLogs = [];
+          if (!Array.isArray(this.state.claimedGiftIds)) this.state.claimedGiftIds = [];
 
           const claimedSet = new Set(this.state.claimedGiftIds);
-          const existingLogIds = new Set(this.state.activityLogs.map((l) => l.id));
+          this.state.guestbook.forEach((g) => {
+            if (g && g.id && g.claimed) claimedSet.add(g.id);
+          });
+          this.state.activityLogs.forEach((l) => {
+            if (l && l.giftId && l.giftClaimed) claimedSet.add(l.giftId);
+          });
+
+          const existingLogById = new Map();
+          this.state.activityLogs.forEach((l) => {
+            if (l && l.id) existingLogById.set(l.id, l);
+          });
+
           const guestbookMap = new Map();
           this.state.guestbook.forEach((g) => {
             if (g && g.id) {
-              guestbookMap.set(g.id, { ...g });
+              const isAlreadyClaimed = g.action === 'gift_wood'
+                ? Boolean(g.claimed || claimedSet.has(g.id))
+                : true;
+              if (isAlreadyClaimed && g.action === 'gift_wood') {
+                claimedSet.add(g.id);
+              }
+              guestbookMap.set(g.id, { ...g, claimed: isAlreadyClaimed });
             }
           });
 
@@ -1963,7 +1958,7 @@
 
                   const prevEntry = guestbookMap.get(docId);
                   const isClaimed = action === 'gift_wood'
-                    ? Boolean(d.woodClaimed || d.claimed || (prevEntry && prevEntry.claimed) || claimedSet.has(docId))
+                    ? Boolean(claimedSet.has(docId) || (prevEntry && prevEntry.claimed) || d.woodClaimed || d.claimed)
                     : true;
 
                   if (isClaimed && action === 'gift_wood') {
@@ -1982,56 +1977,12 @@
                       timestamp: ts
                     });
                     changed = true;
-                  } else {
-                    const nextClaimed = action === 'gift_wood' ? Boolean(prevEntry.claimed || isClaimed) : true;
-                    const nextWoodAmt = action === 'gift_wood' ? Math.max(1, Number(prevEntry.woodAmount || wAmt) || 1) : 0;
-                    if (
-                      prevEntry.claimed !== nextClaimed ||
-                      prevEntry.woodAmount !== nextWoodAmt ||
-                      prevEntry.message !== message
-                    ) {
-                      guestbookMap.set(docId, {
-                        ...prevEntry,
-                        woodAmount: nextWoodAmt,
-                        claimed: nextClaimed,
-                        message
-                      });
-                      changed = true;
-                    }
-                  }
-
-                  const visitLogId = `visit_gb_${docId}`;
-                  if (!existingLogIds.has(visitLogId)) {
-                    const logText = action === 'gift_wood'
-                      ? `【お裾分け通知】${visitorName}さんから流木+${wAmt}本が届きました！（${isClaimed ? '受取済み' : '未受取・受取ボタンで受取可'}）`
-                      : `訪問ログ：${visitorName}さん（${beaverName}）が川辺を訪問（${message}）`;
-                    this.addActivityLog(
-                      logText,
-                      action === 'gift_wood' ? '#ico-gift' : '#ico-canoe',
-                      ts,
-                      {
-                        isGiftNotice: action === 'gift_wood',
-                        giftId: action === 'gift_wood' ? docId : null,
-                        giftClaimed: action === 'gift_wood' ? isClaimed : false,
-                        visitorName,
-                        woodAmount: wAmt
-                      }
-                    );
-                    existingLogIds.add(visitLogId);
+                  } else if (prevEntry.claimed !== isClaimed) {
+                    guestbookMap.set(docId, {
+                      ...prevEntry,
+                      claimed: isClaimed
+                    });
                     changed = true;
-                  } else if (action === 'gift_wood') {
-                    const existingLog = this.state.activityLogs.find((l) => l.id === visitLogId);
-                    if (existingLog && existingLog.giftClaimed !== isClaimed) {
-                      existingLog.giftClaimed = isClaimed;
-                      existingLog.text = `【お裾分け通知】${visitorName}さんから流木+${wAmt}本が届きました！（${isClaimed ? '受取済み' : '未受取・受取ボタンで受取可'}）`;
-                      changed = true;
-                    }
-                  }
-
-                  if (action === 'gift_wood' && !isClaimed && !this.notifiedGiftToastIds.has(docId)) {
-                    this.notifiedGiftToastIds.add(docId);
-                    newUnnotifiedGiftCount += wAmt;
-                    latestNewPendingGift = { visitorName, wAmt };
                   }
                 }
               }
@@ -2048,6 +1999,7 @@
             const isGift = entry.action === 'gift_wood';
             const wAmt = isGift ? Math.max(1, Number(entry.woodAmount) || 1) : 0;
             const isClaimed = isGift ? Boolean(entry.claimed || claimedSet.has(entryId)) : true;
+
             if (isGift && isClaimed) {
               claimedSet.add(entryId);
               if (!entry.claimed) {
@@ -2055,6 +2007,7 @@
                 changed = true;
               }
             }
+
             const msg = entry.message || (
               isGift
                 ? `${vName}さんが流木を${wAmt}本おすそわけしてくれました！`
@@ -2062,31 +2015,33 @@
             );
 
             const vLogId = `visit_gb_${entryId}`;
-            if (!existingLogIds.has(vLogId)) {
-              const logText = isGift
-                ? `【お裾分け通知】${vName}さんから流木+${wAmt}本が届きました！（${isClaimed ? '受取済み' : '未受取・受取ボタンで受取可'}）`
-                : `訪問ログ：${vName}さん（${bName}）が訪問 — ${msg}`;
-              this.addActivityLog(
-                logText,
-                isGift ? '#ico-gift' : '#ico-canoe',
-                ts,
-                {
-                  isGiftNotice: isGift,
-                  giftId: isGift ? entryId : null,
-                  giftClaimed: isGift ? isClaimed : false,
-                  visitorName: vName,
-                  woodAmount: wAmt
-                }
-              );
-              existingLogIds.add(vLogId);
+            const expectedText = isGift
+              ? `【お裾分け通知】${vName}さんから流木+${wAmt}本が届きました！（${isClaimed ? '受取済み' : '未受取・受取ボタンで受取可'}）`
+              : `訪問ログ：${vName}さん（${bName}）が訪問 — ${msg}`;
+
+            const existingLog = existingLogById.get(vLogId);
+            if (!existingLog) {
+              const newLog = {
+                id: vLogId,
+                icon: isGift ? '#ico-gift' : '#ico-canoe',
+                text: expectedText,
+                timestamp: ts,
+                isGiftNotice: isGift,
+                giftId: isGift ? entryId : null,
+                giftClaimed: isGift ? isClaimed : false,
+                visitorName: vName,
+                woodAmount: wAmt
+              };
+              this.state.activityLogs.unshift(newLog);
+              existingLogById.set(vLogId, newLog);
               changed = true;
-            } else if (isGift) {
-              const existingLog = this.state.activityLogs.find((l) => l.id === vLogId);
-              if (existingLog && existingLog.giftClaimed !== isClaimed) {
-                existingLog.giftClaimed = isClaimed;
-                existingLog.text = `【お裾分け通知】${vName}さんから流木+${wAmt}本が届きました！（${isClaimed ? '受取済み' : '未受取・受取ボタンで受取可'}）`;
-                changed = true;
-              }
+            } else if (
+              existingLog.giftClaimed !== (isGift ? isClaimed : false) ||
+              existingLog.text !== expectedText
+            ) {
+              existingLog.giftClaimed = isGift ? isClaimed : false;
+              existingLog.text = expectedText;
+              changed = true;
             }
 
             if (isGift && !isClaimed && !this.notifiedGiftToastIds.has(entryId)) {
@@ -2098,7 +2053,11 @@
             }
           }
 
-          this.state.claimedGiftIds = Array.from(claimedSet).slice(-200);
+          if (this.state.activityLogs.length > 60) {
+            this.state.activityLogs.length = 60;
+          }
+
+          this.state.claimedGiftIds = Array.from(claimedSet).slice(-300);
 
           if (changed) {
             this.state.guestbook = Array.from(guestbookMap.values())
@@ -2135,15 +2094,28 @@
           const entry = entryIdx >= 0 ? this.state.guestbook[entryIdx] : null;
 
           if (claimedSet.has(giftId) || (entry && entry.claimed)) {
-            this.showToast('このお裾分けはすでに受け取り済みです');
+            claimedSet.add(giftId);
+            this.state.claimedGiftIds = Array.from(claimedSet).slice(-300);
+            if (entry) entry.claimed = true;
             this.markGiftLogClaimed(giftId);
             this.renderGuestbook();
             this.renderActivityLogs();
+            this.showToast('このお裾分けはすでに受け取り済みです');
             return false;
           }
 
           let grantedWood = entry ? Math.max(1, Number(entry.woodAmount) || 1) : 1;
           const visitorName = (entry && entry.visitorName) || 'ななしの訪問者';
+
+          claimedSet.add(giftId);
+          this.state.claimedGiftIds = Array.from(claimedSet).slice(-300);
+          if (entry) {
+            entry.claimed = true;
+            entry.woodAmount = grantedWood;
+          }
+          this.markGiftLogClaimed(giftId, visitorName, grantedWood);
+          this.renderGuestbook();
+          this.renderActivityLogs();
 
           const fb = this.storage.getFb();
           const uid = this.storage.uid || (this.state.user && this.state.user.uid);
@@ -2165,13 +2137,7 @@
                   return { granted: amt, already: false };
                 });
                 if (txRes && txRes.already) {
-                  claimedSet.add(giftId);
-                  this.state.claimedGiftIds = Array.from(claimedSet).slice(-200);
-                  if (entry) entry.claimed = true;
-                  this.markGiftLogClaimed(giftId);
                   await this.storage.saveGameData(this.state);
-                  this.renderGuestbook();
-                  this.renderActivityLogs();
                   this.showToast('このお裾分けはすでに受け取り済みです');
                   return false;
                 }
@@ -2182,25 +2148,12 @@
                 await fb.setDoc(docRef, { woodClaimed: true, claimed: true }, { merge: true });
               }
             } catch (err) {
-              console.warn('お裾分け受取のFirestore更新に失敗:', err);
+              console.warn('お裾分け受取のFirestore更新に失敗（ローカル受取済みは維持）:', err);
             }
-          }
-
-          claimedSet.add(giftId);
-          this.state.claimedGiftIds = Array.from(claimedSet).slice(-200);
-          if (entry) {
-            entry.claimed = true;
-            entry.woodAmount = grantedWood;
           }
 
           this.state.user.wood = Number(this.state.user.wood || 0) + grantedWood;
           this.markGiftLogClaimed(giftId, visitorName, grantedWood);
-          this.addActivityLog(
-            `お裾分け受取完了：${visitorName}さんから流木+${grantedWood}本を受け取りました！`,
-            '#ico-gift',
-            Date.now(),
-            { isGiftNotice: true, giftId, giftClaimed: true, visitorName, woodAmount: grantedWood }
-          );
 
           await this.storage.saveGameData(this.state);
           this.updateUI();
