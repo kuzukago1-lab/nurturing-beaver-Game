@@ -393,7 +393,10 @@
             </div>
             <div>
               <div class="flex items-center gap-1.5 flex-wrap">
-                <h1 id="ui-beaver-name" class="text-lg sm:text-xl font-extrabold text-amber-950 tracking-tight">ぽんた</h1>
+                <div class="flex flex-col">
+                  <h1 id="ui-beaver-name" class="text-lg sm:text-xl font-extrabold text-amber-950 tracking-tight leading-tight">ぽんた</h1>
+                  <p id="ui-beaver-birthday" class="text-[11px] font-extrabold text-amber-700 leading-tight mt-0.5">誕生日: ----年--月--日</p>
+                </div>
                 <button id="btn-edit-name" title="名前を変更" class="p-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-800 text-xs font-bold transition inline-flex items-center gap-1">
                   <svg class="w-3.5 h-3.5"><use href="#ico-edit"/></svg>
                   <span>変更</span>
@@ -3648,6 +3651,32 @@ addActivityLog(text, icon = '#ico-sparkle', customTimestamp = Date.now(), extra 
         }
       }
 
+      formatBirthdayDate(birthdayAtMs) {
+        if (!birthdayAtMs || typeof birthdayAtMs !== 'number' || Number.isNaN(birthdayAtMs) || birthdayAtMs <= 0) {
+          return '誕生日: ----年--月--日';
+        }
+        const d = new Date(birthdayAtMs);
+        const year = d.getFullYear();
+        const month = d.getMonth() + 1;
+        const day = d.getDate();
+        return `誕生日: ${year}年${month}月${day}日`;
+      }
+
+      ensureBirthdayInitialized(forceNowMs = null) {
+        if (!this.state || !this.state.beaver) return null;
+        const current = this.state.beaver.birthdayAtMs;
+        if (typeof current === 'number' && !Number.isNaN(current) && current > 0) {
+          return current;
+        }
+        const fallbackMs = typeof forceNowMs === 'number' && forceNowMs > 0
+          ? forceNowMs
+          : (this.state.user && typeof this.state.user.lastUpdatedAt === 'number' && this.state.user.lastUpdatedAt > 0
+              ? this.state.user.lastUpdatedAt
+              : Date.now());
+        this.state.beaver.birthdayAtMs = fallbackMs;
+        return fallbackMs;
+      }
+
       getGrowthStage(damLevel) {
         const lv = Math.max(1, Number(damLevel) || 1);
         if (lv >= 6) {
@@ -4236,9 +4265,13 @@ addActivityLog(text, icon = '#ico-sparkle', customTimestamp = Date.now(), extra 
 
       updateUI() {
         const isVisit = Boolean(this.visitingTarget);
+        if (!isVisit && this.state && this.state.registered) {
+          this.ensureBirthdayInitialized(Date.now());
+        }
         const activeBeaver = isVisit
           ? {
               name: this.visitingTarget.beaverName,
+              birthdayAtMs: this.visitingTarget.birthdayAtMs || null,
               damLevel: this.visitingTarget.damLevel,
               damProgress: this.visitingTarget.damProgress,
               hunger: this.visitingTarget.hunger,
@@ -4259,6 +4292,7 @@ addActivityLog(text, icon = '#ico-sparkle', customTimestamp = Date.now(), extra 
         };
 
         setText('ui-beaver-name', activeBeaver.name);
+        setText('ui-beaver-birthday', this.formatBirthdayDate(activeBeaver.birthdayAtMs));
         setText('ui-owner-name', isVisit ? this.visitingTarget.ownerName : this.state.user.ownerName);
         setText('ui-my-account-id', this.formatSecretId(this.state.user.accountId));
         setText('ui-friends-badge', this.state.user.favoriteIds.length);
