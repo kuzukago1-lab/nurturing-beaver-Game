@@ -1143,14 +1143,7 @@
             max: 10,
             lastRegenAt: Date.now()
           },
-          activityLogs: [
-            {
-              id: 'log_init',
-              icon: '#ico-beaver',
-              text: 'もくもく川辺での暮らしが始まりました！',
-              timestamp: Date.now()
-            }
-          ],
+          activityLogs: [],
           guestbook: [],
           claimedGiftIds: []
         };
@@ -2014,34 +2007,33 @@
                 : `${vName}さんが川辺に遊びに来てくれました！`
             );
 
-            const vLogId = `visit_gb_${entryId}`;
-            const expectedText = isGift
-              ? `【お裾分け通知】${vName}さんから流木+${wAmt}本が届きました！（${isClaimed ? '受取済み' : '未受取・受取ボタンで受取可'}）`
-              : `訪問ログ：${vName}さん（${bName}）が訪問 — ${msg}`;
-
-            const existingLog = existingLogById.get(vLogId);
-            if (!existingLog) {
-              const newLog = {
-                id: vLogId,
-                icon: isGift ? '#ico-gift' : '#ico-canoe',
-                text: expectedText,
-                timestamp: ts,
-                isGiftNotice: isGift,
-                giftId: isGift ? entryId : null,
-                giftClaimed: isGift ? isClaimed : false,
-                visitorName: vName,
-                woodAmount: wAmt
-              };
-              this.state.activityLogs.unshift(newLog);
-              existingLogById.set(vLogId, newLog);
-              changed = true;
-            } else if (
-              existingLog.giftClaimed !== (isGift ? isClaimed : false) ||
-              existingLog.text !== expectedText
-            ) {
-              existingLog.giftClaimed = isGift ? isClaimed : false;
-              existingLog.text = expectedText;
-              changed = true;
+            if (isGift && vName && vName !== 'ななしの訪問者' && wAmt > 0) {
+              const vLogId = `visit_gb_${entryId}`;
+              const expectedText = `【お裾分け通知】${vName}さんから流木+${wAmt}本が届きました！（${isClaimed ? '受取済み' : '未受取・受取ボタンで受取可'}）`;
+              const existingLog = existingLogById.get(vLogId);
+              if (!existingLog) {
+                const newLog = {
+                  id: vLogId,
+                  icon: '#ico-gift',
+                  text: expectedText,
+                  timestamp: ts,
+                  isGiftNotice: true,
+                  giftId: entryId,
+                  giftClaimed: isClaimed,
+                  visitorName: vName,
+                  woodAmount: wAmt
+                };
+                this.state.activityLogs.unshift(newLog);
+                existingLogById.set(vLogId, newLog);
+                changed = true;
+              } else if (
+                existingLog.giftClaimed !== isClaimed ||
+                existingLog.text !== expectedText
+              ) {
+                existingLog.giftClaimed = isClaimed;
+                existingLog.text = expectedText;
+                changed = true;
+              }
             }
 
             if (isGift && !isClaimed && !this.notifiedGiftToastIds.has(entryId)) {
@@ -2418,9 +2410,16 @@ addActivityLog(text, icon = '#ico-sparkle', customTimestamp = Date.now(), extra 
       renderActivityLogs() {
         const container = document.getElementById('activity-log-window');
         if (!container) return;
-        const logs = Array.isArray(this.state && this.state.activityLogs) ? this.state.activityLogs : [];
+        const rawLogs = Array.isArray(this.state && this.state.activityLogs) ? this.state.activityLogs : [];
+        // 【修正後】お裾分け通知 ＋ 実際の操作・イベント発生ログの両方を表示する箇所
+        const logs = rawLogs.filter((entry) => {
+          if (!entry || typeof entry.text !== 'string' || !entry.text.trim()) return false;
+          if (entry.id === 'log_init') return false;
+          return true;
+        });
+
         if (logs.length === 0) {
-          container.innerHTML = '<p class="text-[11px] font-bold text-amber-700/80 py-1">まだ活動の記録はありません。</p>';
+          container.innerHTML = '<p class="text-[11px] font-bold text-amber-700/80 py-1">まだお裾分け通知や活動の記録はありません。</p>';
           return;
         }
 
@@ -2430,7 +2429,7 @@ addActivityLog(text, icon = '#ico-sparkle', customTimestamp = Date.now(), extra 
           const hh = String(d.getHours()).padStart(2, '0');
           const mm = String(d.getMinutes()).padStart(2, '0');
           const iconId = entry.icon || '#ico-sparkle';
-          const isGiftNotice = Boolean(entry.isGiftNotice || (typeof entry.text === 'string' && entry.text.includes('お裾分け')));
+          const isGiftNotice = Boolean(entry.isGiftNotice || (typeof entry.text === 'string' && entry.text.includes('【お裾分け通知】')));
           const isClaimed = Boolean(entry.giftClaimed);
 
           const row = document.createElement('div');
@@ -3995,21 +3994,22 @@ renderGuestbook() {
         const container = document.getElementById('content-guestbook');
         const badge = document.getElementById('ui-guestbook-badge');
         const claimedSet = new Set(Array.isArray(this.state && this.state.claimedGiftIds) ? this.state.claimedGiftIds : []);
-        const unclaimedGiftCount = (this.state.guestbook || []).filter(
-          (g) => g && g.action === 'gift_wood' && !(g.claimed || claimedSet.has(g.id))
+        const giftEntries = (this.state.guestbook || []).filter((g) => g && g.action === 'gift_wood');
+        const unclaimedGiftCount = giftEntries.filter(
+          (g) => !(g.claimed || claimedSet.has(g.id))
         ).length;
         if (badge) {
-          badge.textContent = unclaimedGiftCount > 0 ? `${this.state.guestbook.length} (未受取${unclaimedGiftCount})` : this.state.guestbook.length;
+          badge.textContent = unclaimedGiftCount > 0 ? `${giftEntries.length} (未受取${unclaimedGiftCount})` : giftEntries.length;
         }
         container.innerHTML = '';
 
-        this.state.guestbook.forEach((entry) => {
+        giftEntries.forEach((entry) => {
           const minsAgo = Math.max(1, Math.floor((Date.now() - entry.timestamp) / 60000));
           const timeLabel = minsAgo >= 60 ? `${Math.floor(minsAgo / 60)}時間前` : `${minsAgo}分前`;
-          const isGift = entry.action === 'gift_wood';
-          const iconId = isGift ? '#ico-gift' : '#ico-heart';
-          const isClaimed = isGift ? Boolean(entry.claimed || claimedSet.has(entry.id)) : true;
-          const woodAmt = isGift ? Math.max(1, Number(entry.woodAmount) || 1) : 0;
+          const isGift = true;
+          const iconId = '#ico-gift';
+          const isClaimed = Boolean(entry.claimed || claimedSet.has(entry.id));
+          const woodAmt = Math.max(1, Number(entry.woodAmount) || 1);
 
           const row = document.createElement('div');
           row.className = isGift && !isClaimed
