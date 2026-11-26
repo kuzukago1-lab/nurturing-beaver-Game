@@ -638,7 +638,7 @@
         <div id="content-friends" class="hidden space-y-3">
           <div class="bg-amber-50/90 border-2 border-amber-200 rounded-2xl p-3">
             <label for="input-friend-search-id" class="block text-xs font-extrabold text-amber-950 mb-1.5">
-              アカウントIDの数字を入力して検索（例: 204819, 319042, 482710, 591024）
+              登録済みプレイヤーのアカウントID（6桁の半角数字）を入力して検索
             </label>
             <div class="flex gap-2">
               <div class="flex-1 flex items-center rounded-xl border-2 border-amber-300 focus-within:border-amber-500 bg-white overflow-hidden">
@@ -1116,7 +1116,7 @@
             ownerName: 'あなた',
             wood: 6,
             coins: 35,
-            favoriteIds: ['neighbor_1'],
+            favoriteIds: [],
             lastUpdatedAt: Date.now()
           },
           gameClock: {
@@ -1151,24 +1151,7 @@
               timestamp: Date.now()
             }
           ],
-          guestbook: [
-            {
-              id: 'gb_1',
-              visitorName: 'もりのみどり',
-              beaverName: 'ちゃちゃ丸',
-              action: 'gift_wood',
-              message: '立派なダムだね！流木を1本置いていくよ！',
-              timestamp: Date.now() - 1000 * 60 * 45
-            },
-            {
-              id: 'gb_2',
-              visitorName: 'かわうそ太郎',
-              beaverName: 'ココア',
-              action: 'pet',
-              message: 'ぽんたちゃんをなでなでしたよ♪',
-              timestamp: Date.now() - 1000 * 60 * 180
-            }
-          ]
+          guestbook: []
         };
       }
 
@@ -1637,64 +1620,9 @@
       }
 
       async fetchNeighbors() {
-        const defaultNeighbors = [
-          {
-            uid: 'neighbor_1',
-            accountId: 'BV-204819',
-            ownerName: 'もりのみどり',
-            beaverName: 'ちゃちゃ丸',
-            damLevel: 4,
-            damProgress: 60,
-            hunger: 15,
-            mood: 95,
-            color: '#7c4318',
-            comment: 'ダム増築中！気軽に遊びに来てね〜',
-            visitedToday: false
-          },
-          {
-            uid: 'neighbor_2',
-            accountId: 'BV-319042',
-            ownerName: 'かわうそ太郎',
-            beaverName: 'ココア',
-            damLevel: 2,
-            damProgress: 40,
-            hunger: 25,
-            mood: 88,
-            color: '#5c3317',
-            comment: 'りんごが大好きな甘えん坊です♪',
-            visitedToday: false
-          },
-          {
-            uid: 'neighbor_3',
-            accountId: 'BV-482710',
-            ownerName: 'どんぐり姫',
-            beaverName: 'きなこ',
-            damLevel: 6,
-            damProgress: 85,
-            hunger: 10,
-            mood: 98,
-            color: '#c28246',
-            comment: '親方ビーバー目指して毎日コツコツ！',
-            visitedToday: false
-          },
-          {
-            uid: 'neighbor_4',
-            accountId: 'BV-591024',
-            ownerName: 'せせらぎ工房',
-            beaverName: 'まるお',
-            damLevel: 3,
-            damProgress: 15,
-            hunger: 35,
-            mood: 70,
-            color: '#854d27',
-            comment: '流木いつも大歓迎です！',
-            visitedToday: false
-          }
-        ];
-
         const fb = this.getFb();
         if (!fb || !this.onlineConnected) {
-          return defaultNeighbors;
+          return [];
         }
 
         try {
@@ -1706,6 +1634,8 @@
             const prof = raw.publicProfile || {};
             const userObj = raw.user || {};
             const beaverObj = raw.beaver || {};
+            const isRegistered = Boolean(prof.registered ?? raw.registered);
+            if (!isRegistered) return;
             const ownerName = prof.ownerName || userObj.ownerName;
             const beaverName = prof.beaverName || beaverObj.name;
             const accountId = prof.accountId || userObj.accountId;
@@ -1727,10 +1657,10 @@
               visitedToday: false
             });
           });
-          return [...onlineNeighbors, ...defaultNeighbors];
+          return onlineNeighbors;
         } catch (err) {
-          console.warn('他プレイヤー一覧の取得に失敗（デフォルト川辺を表示）:', err);
-          return defaultNeighbors;
+          console.warn('他プレイヤー一覧の取得に失敗:', err);
+          return [];
         }
       }
 
@@ -1873,6 +1803,7 @@
         this.fireworkSparks = [];
         this.fireworkEndTime = 0;
         this.nextFireworkLaunchAt = 0;
+        this.notifiedGiftToastIds = new Set();
         this.STAMINA_REGEN_MS = 3 * 60 * 1000;
         this.GAME_HOUR_MS = 2 * 60 * 1000;
       }
@@ -1880,6 +1811,10 @@
       async init() {
         this.state = await this.storage.loadGameData();
         this.neighbors = await this.storage.fetchNeighbors();
+        const validUids = new Set(this.neighbors.map((n) => n.uid));
+        if (Array.isArray(this.state.user.favoriteIds)) {
+          this.state.user.favoriteIds = this.state.user.favoriteIds.filter((id) => validUids.has(id));
+        }
         this.pendingStartAccountId = this.state.user.accountId;
         this.pendingStartTransferCode = this.state.user.transferCode || '';
         this.secretsVisible = false;
@@ -2000,8 +1935,8 @@
           });
 
           let changed = false;
-          let pendingGiftCount = 0;
-          let latestPendingGift = null;
+          let newUnnotifiedGiftCount = 0;
+          let latestNewPendingGift = null;
 
           const fb = this.storage.getFb();
           const uid = this.storage.uid || (this.state.user && this.state.user.uid);
@@ -2093,9 +2028,10 @@
                     }
                   }
 
-                  if (action === 'gift_wood' && !isClaimed) {
-                    pendingGiftCount += wAmt;
-                    latestPendingGift = { visitorName, wAmt };
+                  if (action === 'gift_wood' && !isClaimed && !this.notifiedGiftToastIds.has(docId)) {
+                    this.notifiedGiftToastIds.add(docId);
+                    newUnnotifiedGiftCount += wAmt;
+                    latestNewPendingGift = { visitorName, wAmt };
                   }
                 }
               }
@@ -2153,9 +2089,12 @@
               }
             }
 
-            if (isGift && !isClaimed && !latestPendingGift) {
-              pendingGiftCount += wAmt;
-              latestPendingGift = { visitorName: vName, wAmt };
+            if (isGift && !isClaimed && !this.notifiedGiftToastIds.has(entryId)) {
+              this.notifiedGiftToastIds.add(entryId);
+              newUnnotifiedGiftCount += wAmt;
+              if (!latestNewPendingGift) {
+                latestNewPendingGift = { visitorName: vName, wAmt };
+              }
             }
           }
 
@@ -2170,9 +2109,9 @@
             this.updateUI();
           }
 
-          if (notifyChanges && pendingGiftCount > 0 && latestPendingGift) {
+          if (notifyChanges && newUnnotifiedGiftCount > 0 && latestNewPendingGift) {
             this.sound.playPop(460);
-            this.showGiftReceivedBanner(`お裾分け通知：${latestPendingGift.visitorName}さんから流木+${latestPendingGift.wAmt}本が届いています！受取ボタンで受け取りましょう`, 3600);
+            this.showGiftReceivedBanner(`お裾分け通知：${latestNewPendingGift.visitorName}さんから流木+${latestNewPendingGift.wAmt}本が届いています！受取ボタンで受け取りましょう`, 3600);
           }
 
           return changed;
@@ -2414,6 +2353,7 @@
 
           this.state = imported;
           this.visitingTarget = null;
+          if (this.notifiedGiftToastIds) this.notifiedGiftToastIds.clear();
           this.pendingStartAccountId = fullId;
           this.pendingStartTransferCode = code;
           this.pendingBeaverCustom = {
@@ -3206,6 +3146,7 @@ addActivityLog(text, icon = '#ico-sparkle', customTimestamp = Date.now(), extra 
 
       returnHome() {
         this.visitingTarget = null;
+          if (this.notifiedGiftToastIds) this.notifiedGiftToastIds.clear();
         this.beaverAnim.xRatio = 0.45;
         this.beaverAnim.targetXRatio = 0.45;
         this.sound.playPop(340);
@@ -3754,6 +3695,7 @@ addActivityLog(text, icon = '#ico-sparkle', customTimestamp = Date.now(), extra 
                 tailSize: this.state.beaver.bodyStyle.tailSize
               };
               this.visitingTarget = null;
+          if (this.notifiedGiftToastIds) this.notifiedGiftToastIds.clear();
               this.syncStartScreenState();
               this.updateUI();
               this.renderActivityLogs();
@@ -3972,6 +3914,11 @@ addActivityLog(text, icon = '#ico-sparkle', customTimestamp = Date.now(), extra 
       renderNeighbors() {
         const container = document.getElementById('content-neighbors');
         container.innerHTML = '';
+
+        if (!Array.isArray(this.neighbors) || this.neighbors.length === 0) {
+          container.innerHTML = '<p class="col-span-full text-xs font-bold text-stone-500 bg-amber-50/60 rounded-xl p-3 border border-amber-100">現在表示できる登録済みの川辺はありません。新しくアカウント登録された川辺がここに表示されます。</p>';
+          return;
+        }
 
         const sorted = [...this.neighbors].sort((a, b) => {
           const aFav = this.state.user.favoriteIds.includes(a.uid) ? 1 : 0;
