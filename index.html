@@ -404,17 +404,19 @@
               </div>
               <p class="text-xs text-amber-700 font-bold mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
                 <span>飼い主: <strong id="ui-owner-name" class="text-amber-950">あなた</strong></span>
-                <span class="text-amber-300">|</span>
-                <button type="button" id="btn-toggle-secret-visibility" title="アカウントIDの表示・非表示を切り替え" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-stone-100 hover:bg-stone-200 text-stone-800 font-extrabold transition">
-                  <span id="ui-secret-visibility-label">IDを表示</span>
-                </button>
-                <button type="button" id="btn-copy-my-id" title="クリックでアカウントIDをコピー" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-100 hover:bg-amber-200 text-amber-950 font-extrabold transition">
-                  <span>ID: <span id="ui-my-account-id">●●●●●●</span></span>
-                  <span class="text-[10px] text-amber-700">[コピー]</span>
-                </button>
-                <button type="button" id="btn-open-transfer-modal" title="パスワード管理・他端末ログイン画面へ移動" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-sky-100 hover:bg-sky-200 text-sky-900 font-extrabold transition">
-                  <span>パス管理</span>
-                </button>
+                <span id="ui-my-account-controls" class="inline-flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                  <span class="text-amber-300">|</span>
+                  <button type="button" id="btn-toggle-secret-visibility" title="アカウントIDの表示・非表示を切り替え" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-stone-100 hover:bg-stone-200 text-stone-800 font-extrabold transition">
+                    <span id="ui-secret-visibility-label">IDを表示</span>
+                  </button>
+                  <button type="button" id="btn-copy-my-id" title="クリックでアカウントIDをコピー" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-100 hover:bg-amber-200 text-amber-950 font-extrabold transition">
+                    <span>ID: <span id="ui-my-account-id">●●●●●●</span></span>
+                    <span class="text-[10px] text-amber-700">[コピー]</span>
+                  </button>
+                  <button type="button" id="btn-open-transfer-modal" title="パスワード管理・他端末ログイン画面へ移動" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-sky-100 hover:bg-sky-200 text-sky-900 font-extrabold transition">
+                    <span>パス管理</span>
+                  </button>
+                </span>
                 <span class="text-amber-300">|</span>
                 <span>ダムLv.<span id="ui-dam-level" class="text-sm text-amber-900">1</span> (<span id="ui-dam-progress">0</span>)</span>
               </p>
@@ -1661,14 +1663,16 @@
         }
       }
 
-      async sendVisitInteraction(neighborUid, actionType, senderName, woodAmount = 0) {
+      async sendVisitInteraction(neighborUid, actionType, senderName, woodAmount = 0, senderBeaverName = 'ビーバー') {
         const fb = this.getFb();
-        if (fb && this.onlineConnected && neighborUid && !neighborUid.startsWith('neighbor_')) {
+        const safeWood = actionType === 'gift_wood' ? Math.max(1, Number(woodAmount) || 1) : 0;
+
+        if (fb && this.onlineConnected && neighborUid && !String(neighborUid).startsWith('neighbor_')) {
           try {
-            const safeWood = actionType === 'gift_wood' ? Math.max(1, Number(woodAmount) || 1) : 0;
             await fb.addDoc(fb.collection(fb.db, 'players', neighborUid, 'guestbook'), {
               visitorUid: this.uid || 'anonymous',
               visitorName: senderName || '旅人',
+              beaverName: senderBeaverName || 'ビーバー',
               action: actionType,
               woodAmount: safeWood,
               woodClaimed: false,
@@ -1679,11 +1683,14 @@
               timestamp: Date.now(),
               createdAt: fb.serverTimestamp()
             });
+            return { success: true, online: true, neighborUid, actionType, senderName, woodAmount: safeWood };
           } catch (err) {
             console.warn('訪問ログ・おすそわけ送信に失敗:', err);
+            return { success: false, online: true, error: err, neighborUid, actionType, senderName, woodAmount: safeWood };
           }
         }
-        return { success: true, neighborUid, actionType, senderName, woodAmount };
+
+        return { success: true, online: false, neighborUid, actionType, senderName, woodAmount: safeWood };
       }
     }
 
@@ -3129,8 +3136,9 @@ addActivityLog(text, icon = '#ico-sparkle', customTimestamp = Date.now(), extra 
       }
 
       async handleVisitGift() {
-        if (!this.visitingTarget) return;
-        if (this.state.user.wood < 1) {
+        if (!this.visitingTarget || !this.state || !this.state.user) return;
+        const currentWood = Number(this.state.user.wood || 0);
+        if (currentWood < 1) {
           this.showToast('おすそわけする流木がありません');
           return;
         }
@@ -3139,12 +3147,37 @@ addActivityLog(text, icon = '#ico-sparkle', customTimestamp = Date.now(), extra 
           return;
         }
 
-        this.state.user.wood -= 1;
-        this.state.user.coins += 8;
-        this.visitingTarget.visitedToday = true;
-        this.visitingTarget.wood = Number(this.visitingTarget.wood || 0) + 1;
+        const prevWood = currentWood;
+        const prevCoins = Number(this.state.user.coins || 0);
+        const prevVisited = Boolean(this.visitingTarget.visitedToday);
+        const prevTargetWood = Number(this.visitingTarget.wood || 0);
+        const senderName = this.state.user.ownerName || '旅人';
+        const senderBeaverName = (this.state.beaver && this.state.beaver.name) || 'ビーバー';
 
-        await this.storage.sendVisitInteraction(this.visitingTarget.uid, 'gift_wood', this.state.user.ownerName, 1);
+        this.state.user.wood = prevWood - 1;
+        this.state.user.coins = prevCoins + 8;
+        this.visitingTarget.visitedToday = true;
+        this.visitingTarget.wood = prevTargetWood + 1;
+
+        const sendRes = await this.storage.sendVisitInteraction(
+          this.visitingTarget.uid,
+          'gift_wood',
+          senderName,
+          1,
+          senderBeaverName
+        );
+
+        if (sendRes && sendRes.success === false) {
+          this.state.user.wood = prevWood;
+          this.state.user.coins = prevCoins;
+          this.visitingTarget.visitedToday = prevVisited;
+          this.visitingTarget.wood = prevTargetWood;
+          this.updateUI();
+          this.renderNeighbors();
+          this.showToast('おすそわけの送信に失敗しました。通信状況を確認してください');
+          return;
+        }
+
         await this.storage.saveGameData(this.state);
 
         this.triggerBeaverAction('happy', 120);
@@ -3851,11 +3884,13 @@ addActivityLog(text, icon = '#ico-sparkle', customTimestamp = Date.now(), extra 
         const homePanel = document.getElementById('panel-home-actions');
         const visitPanel = document.getElementById('panel-visit-actions');
         const editNameBtn = document.getElementById('btn-edit-name');
+        const myAccountControls = document.getElementById('ui-my-account-controls');
 
         if (visitBanner) visitBanner.classList.toggle('hidden', !isVisit);
         if (homePanel) homePanel.classList.toggle('hidden', isVisit);
         if (visitPanel) visitPanel.classList.toggle('hidden', !isVisit);
         if (editNameBtn) editNameBtn.classList.toggle('hidden', isVisit);
+        if (myAccountControls) myAccountControls.classList.toggle('hidden', isVisit);
 
         if (isVisit) {
           setText('visit-owner-name', this.visitingTarget.ownerName);
