@@ -785,6 +785,264 @@
     </div>
   </div>
 
+  
+  <!-- マスター認証（別窓パスワード入力画面） -->
+  <div id="master-auth-modal-overlay" class="hidden fixed inset-0 bg-slate-950/75 backdrop-blur-xs z-[70] flex items-center justify-center p-4">
+    <div class="bg-slate-900 text-slate-100 rounded-3xl max-w-sm w-full p-5 shadow-2xl border-2 border-amber-400/70 space-y-3">
+      <div class="flex items-center justify-between border-b border-slate-700 pb-2">
+        <div class="flex items-center gap-2">
+          <span class="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-400/40 text-[10px] font-extrabold tracking-wider">MASTER GATE</span>
+          <h3 class="text-sm sm:text-base font-extrabold text-amber-300">特別マスター認証</h3>
+        </div>
+        <button type="button" id="btn-close-master-auth" class="w-7 h-7 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-extrabold text-xs flex items-center justify-center">✕</button>
+      </div>
+      <p class="text-xs text-slate-300 leading-relaxed">
+        管理者専用パスフレーズを入力してください。
+      </p>
+      <input id="input-master-passphrase" type="password" autocomplete="off" placeholder="マスターパスワードを入力..." class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border-2 border-slate-600 focus:border-amber-400 focus:outline-none text-sm font-extrabold text-amber-200">
+      <div class="flex justify-end gap-2 pt-1">
+        <button type="button" id="btn-cancel-master-auth" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold">閉じる</button>
+        <button type="button" id="btn-submit-master-auth" class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-extrabold shadow">認証する</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- マスターコンソール（テスト用パラメータ・アカウント一覧・個別編集・個別/全員アイテム配布） -->
+  <div id="master-console-overlay" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[75] flex items-center justify-center p-2 sm:p-4">
+    <div class="bg-slate-900 text-slate-100 rounded-3xl max-w-4xl w-full max-h-[92vh] flex flex-col shadow-2xl border-2 border-amber-400/80 overflow-hidden">
+      <!-- ヘッダー -->
+      <div class="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 px-4 sm:px-6 py-3.5 border-b border-amber-400/40 flex items-center justify-between gap-2 shrink-0">
+        <div class="flex items-center gap-2.5 flex-wrap">
+          <span class="px-2.5 py-0.5 rounded-full bg-amber-400 text-slate-950 text-[11px] font-extrabold tracking-wide">MASTER CONSOLE</span>
+          <h3 class="text-sm sm:text-lg font-extrabold text-amber-200">もくもく川辺 管理者マスターコンソール</h3>
+        </div>
+        <button type="button" id="btn-close-master-console" class="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-extrabold shadow transition">
+          コンソールを閉じる
+        </button>
+      </div>
+
+      <!-- タブ切替 -->
+      <div class="bg-slate-800/90 px-4 py-2 border-b border-slate-700 flex items-center gap-2 flex-wrap shrink-0">
+        <button type="button" data-mc-tab="self" class="px-3 py-1.5 rounded-xl text-xs font-extrabold bg-amber-400 text-slate-950 shadow transition">
+          1. 自分のテストパラメータ
+        </button>
+        <button type="button" data-mc-tab="accounts" class="px-3 py-1.5 rounded-xl text-xs font-extrabold bg-slate-700 text-slate-200 hover:bg-slate-600 transition">
+          2. 登録アカウント一覧・個別編集＆配布
+        </button>
+        <button type="button" data-mc-tab="broadcast" class="px-3 py-1.5 rounded-xl text-xs font-extrabold bg-slate-700 text-slate-200 hover:bg-slate-600 transition">
+          3. 全員へアイテム一斉プレゼント
+        </button>
+      </div>
+
+      <!-- コンテンツ本体 -->
+      <div class="p-4 sm:p-5 overflow-y-auto space-y-4 flex-1 text-xs">
+        <!-- タブ1: 自分のテストパラメータ設定 -->
+        <div id="mc-panel-self" class="space-y-4">
+          <div class="bg-slate-800/80 border border-slate-700 rounded-2xl p-4 space-y-3">
+            <div class="flex items-center justify-between flex-wrap gap-2">
+              <h4 class="text-sm font-extrabold text-amber-300">現在ログイン中アカウントのパラメータ即時変更</h4>
+              <span id="mc-self-id-badge" class="px-2.5 py-0.5 rounded-lg bg-slate-950 text-amber-300 border border-amber-400/40 font-extrabold">ID: BV-000000</span>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div>
+                <label class="block text-[11px] font-bold text-slate-300 mb-1">流木（本）</label>
+                <input id="mc-self-wood" type="number" min="0" max="999999" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-600 text-amber-200 font-extrabold">
+              </div>
+              <div>
+                <label class="block text-[11px] font-bold text-slate-300 mb-1">ツヤツヤのどんぐり</label>
+                <input id="mc-self-coins" type="number" min="0" max="999999" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-600 text-yellow-300 font-extrabold">
+              </div>
+              <div>
+                <label class="block text-[11px] font-bold text-slate-300 mb-1">ダムLv（1〜99）</label>
+                <input id="mc-self-dam-lv" type="number" min="1" max="99" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-600 text-emerald-300 font-extrabold">
+              </div>
+              <div>
+                <label class="block text-[11px] font-bold text-slate-300 mb-1">ダム建築pt</label>
+                <input id="mc-self-dam-prog" type="number" min="0" max="999999" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-600 text-emerald-200 font-extrabold">
+              </div>
+              <div>
+                <label class="block text-[11px] font-bold text-slate-300 mb-1">まんぷく度（0〜100）</label>
+                <input id="mc-self-fullness" type="number" min="0" max="100" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-600 text-orange-300 font-extrabold">
+              </div>
+              <div>
+                <label class="block text-[11px] font-bold text-slate-300 mb-1">ごきげん（0〜100）</label>
+                <input id="mc-self-mood" type="number" min="0" max="100" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-600 text-pink-300 font-extrabold">
+              </div>
+              <div>
+                <label class="block text-[11px] font-bold text-slate-300 mb-1">お世話回数（現在値）</label>
+                <input id="mc-self-stamina" type="number" min="0" max="999" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-600 text-sky-300 font-extrabold">
+              </div>
+              <div>
+                <label class="block text-[11px] font-bold text-slate-300 mb-1">ゲーム内時刻（0〜23時）</label>
+                <input id="mc-self-hour" type="number" min="0" max="23" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-600 text-indigo-300 font-extrabold">
+              </div>
+            </div>
+
+            <!-- クイックテストプリセット -->
+            <div class="pt-2 border-t border-slate-700 flex flex-wrap items-center gap-2">
+              <span class="text-[11px] font-bold text-slate-400">クイックテスト:</span>
+              <button type="button" id="mc-preset-max" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold transition">
+                全リソースMAX（流木999 / どんぐり9999 / 満腹100 / ごきげん100 / 回数MAX）
+              </button>
+              <button type="button" id="mc-preset-hungry" class="px-3 py-1.5 rounded-xl bg-orange-600 hover:bg-orange-500 text-white font-extrabold transition">
+                空腹テスト（まんぷく10・ごきげん20）
+              </button>
+              <button type="button" id="mc-preset-fireworks" class="px-3 py-1.5 rounded-xl bg-pink-600 hover:bg-pink-500 text-white font-extrabold transition">
+                花火演出テスト
+              </button>
+              <button type="button" id="mc-preset-nap" class="px-3 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-extrabold transition">
+                ダム昼寝テスト
+              </button>
+            </div>
+
+            <div class="flex justify-end pt-2">
+              <button type="button" id="mc-btn-save-self" class="px-5 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs sm:text-sm font-extrabold shadow-lg transition">
+                自分のパラメータを反映＆保存
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- タブ2: 登録アカウント一覧・個別編集＆個別アイテムプレゼント -->
+        <div id="mc-panel-accounts" class="hidden space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-2 bg-slate-800/80 border border-slate-700 rounded-2xl p-3">
+            <div class="flex items-center gap-2 flex-1 min-w-[200px]">
+              <input id="mc-account-search" type="text" placeholder="ID（BV-123456）・飼い主名・ビーバー名で絞り込み..." class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-600 text-slate-100 font-bold">
+            </div>
+            <button type="button" id="mc-btn-refresh-accounts" class="px-3.5 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-extrabold shrink-0 transition">
+              一覧を再読込
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-3">
+            <!-- 左側：アカウント一覧 -->
+            <div class="lg:col-span-6 bg-slate-800/70 border border-slate-700 rounded-2xl p-3 space-y-2 max-h-[52vh] overflow-y-auto">
+              <div class="flex items-center justify-between text-[11px] font-bold text-slate-400 px-1">
+                <span>登録アカウント一覧（クリックで選択）</span>
+                <span id="mc-account-count-label">0件</span>
+              </div>
+              <div id="mc-accounts-list" class="space-y-2">
+                <p class="text-slate-400 p-2">「一覧を再読込」またはタブを開くと取得します...</p>
+              </div>
+            </div>
+
+            <!-- 右側：選択アカウントの編集＆個別アイテムプレゼント -->
+            <div class="lg:col-span-6 bg-slate-800/90 border border-amber-400/40 rounded-2xl p-3.5 space-y-3">
+              <div id="mc-edit-empty-msg" class="text-slate-400 py-8 text-center font-bold">
+                左の一覧からアカウントを選択すると、状況編集・パスワード確認・個別アイテムプレゼントが行えます。
+              </div>
+
+              <div id="mc-edit-form-wrap" class="hidden space-y-3">
+                <div class="flex items-center justify-between border-b border-slate-700 pb-2">
+                  <div>
+                    <span id="mc-edit-account-id" class="px-2 py-0.5 rounded bg-amber-400/20 text-amber-300 font-extrabold">BV-000000</span>
+                    <span id="mc-edit-uid" class="text-[10px] text-slate-400 ml-1.5 font-mono"></span>
+                  </div>
+                  <span id="mc-edit-pass-display" class="text-[11px] font-extrabold text-sky-300">PW: --------</span>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                  <div>
+                    <label class="block text-[10px] font-bold text-slate-300 mb-0.5">飼い主名</label>
+                    <input id="mc-edit-owner" type="text" maxlength="12" class="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-600 text-white font-bold">
+                  </div>
+                  <div>
+                    <label class="block text-[10px] font-bold text-slate-300 mb-0.5">ビーバー名</label>
+                    <input id="mc-edit-beaver" type="text" maxlength="12" class="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-600 text-white font-bold">
+                  </div>
+                  <div>
+                    <label class="block text-[10px] font-bold text-slate-300 mb-0.5">所持流木（本）</label>
+                    <input id="mc-edit-wood" type="number" min="0" max="999999" class="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-600 text-amber-300 font-extrabold">
+                  </div>
+                  <div>
+                    <label class="block text-[10px] font-bold text-slate-300 mb-0.5">ツヤツヤのどんぐり</label>
+                    <input id="mc-edit-coins" type="number" min="0" max="999999" class="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-600 text-yellow-300 font-extrabold">
+                  </div>
+                  <div>
+                    <label class="block text-[10px] font-bold text-slate-300 mb-0.5">ダムLv</label>
+                    <input id="mc-edit-dam-lv" type="number" min="1" max="99" class="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-600 text-emerald-300 font-extrabold">
+                  </div>
+                  <div>
+                    <label class="block text-[10px] font-bold text-slate-300 mb-0.5">ダム建築pt</label>
+                    <input id="mc-edit-dam-prog" type="number" min="0" max="999999" class="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-600 text-emerald-200 font-extrabold">
+                  </div>
+                  <div>
+                    <label class="block text-[10px] font-bold text-slate-300 mb-0.5">まんぷく度（0〜100）</label>
+                    <input id="mc-edit-fullness" type="number" min="0" max="100" class="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-600 text-orange-300 font-extrabold">
+                  </div>
+                  <div>
+                    <label class="block text-[10px] font-bold text-slate-300 mb-0.5">ごきげん（0〜100）</label>
+                    <input id="mc-edit-mood" type="number" min="0" max="100" class="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-600 text-pink-300 font-extrabold">
+                  </div>
+                </div>
+
+                <button type="button" id="mc-btn-save-target-account" class="w-full py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold shadow transition">
+                  このアカウントのステータス変更を保存
+                </button>
+
+                <!-- 個別アイテムプレゼント枠（流木・どんぐり個別ボタン） -->
+                <div class="pt-2.5 border-t border-slate-700 space-y-2.5 bg-slate-950/60 p-3 rounded-xl">
+                  <div class="text-xs font-extrabold text-amber-300">🎁 このアカウントへ個別アイテムプレゼント（流木・どんぐり別送）</div>
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div class="bg-slate-900/90 border border-amber-500/35 rounded-xl p-2.5 space-y-2">
+                      <label class="block text-[11px] font-extrabold text-amber-200">プレゼント流木（本）</label>
+                      <input id="mc-gift-single-wood" type="number" min="1" max="9999" value="10" class="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-amber-500/40 text-amber-200 font-extrabold">
+                      <button type="button" id="mc-btn-send-single-wood" class="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-extrabold shadow transition">
+                        流木ボタン：流木を贈る
+                      </button>
+                    </div>
+                    <div class="bg-slate-900/90 border border-yellow-500/35 rounded-xl p-2.5 space-y-2">
+                      <label class="block text-[11px] font-extrabold text-yellow-200">プレゼントどんぐり（個）</label>
+                      <input id="mc-gift-single-coins" type="number" min="1" max="99999" value="50" class="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-yellow-500/40 text-yellow-200 font-extrabold">
+                      <button type="button" id="mc-btn-send-single-coins" class="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-yellow-400 to-amber-400 hover:from-yellow-300 hover:to-amber-300 text-slate-950 font-extrabold shadow transition">
+                        どんぐりボタン：どんぐりを贈る
+                      </button>
+                    </div>
+                  </div>
+                  <div>
+                    <label class="block text-[10px] font-bold text-slate-300 mb-0.5">メッセージ（通知・ログ表示）</label>
+                    <input id="mc-gift-single-msg" type="text" maxlength="60" value="運営からの特別プレゼントが届きました！" class="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-600 text-slate-100 font-bold">
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- タブ3: 全員へアイテム一斉プレゼント -->
+        <div id="mc-panel-broadcast" class="hidden space-y-4">
+          <div class="bg-slate-800/90 border-2 border-amber-400/50 rounded-2xl p-4 sm:p-5 space-y-3 max-w-xl mx-auto">
+            <h4 class="text-sm sm:text-base font-extrabold text-amber-300">🎁 登録済みの全アカウントへアイテム一斉プレゼント</h4>
+            <p class="text-xs text-slate-300 leading-relaxed">
+              Firestoreに登録されているすべてのプレイヤー（自分を含む）に、流木やツヤツヤのどんぐりを一斉配布します。流木は受取通知（ゲストブック＆活動ログ）としても届き、どんぐりは直接加算＋活動ログに通知されます。
+            </p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div class="bg-slate-900/80 border border-amber-400/35 rounded-xl p-3 space-y-2">
+                <label class="block text-[11px] font-extrabold text-amber-200">全員へ贈る流木（本）</label>
+                <input id="mc-gift-all-wood" type="number" min="1" max="9999" value="5" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-amber-400/50 text-amber-200 font-extrabold">
+                <button type="button" id="mc-btn-send-all-wood" class="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 text-xs font-extrabold shadow-lg transition">
+                  流木ボタン：全員に流木を一斉配布
+                </button>
+              </div>
+              <div class="bg-slate-900/80 border border-yellow-400/35 rounded-xl p-3 space-y-2">
+                <label class="block text-[11px] font-extrabold text-yellow-200">全員へ贈るどんぐり（個）</label>
+                <input id="mc-gift-all-coins" type="number" min="1" max="99999" value="30" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-yellow-400/50 text-yellow-200 font-extrabold">
+                <button type="button" id="mc-btn-send-all-coins" class="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-yellow-400 to-amber-400 hover:from-yellow-300 hover:to-amber-300 text-slate-950 text-xs font-extrabold shadow-lg transition">
+                  どんぐりボタン：全員にどんぐりを一斉配布
+                </button>
+              </div>
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-slate-300 mb-1">一斉配布メッセージ</label>
+              <input id="mc-gift-all-msg" type="text" maxlength="60" value="運営から全プレイヤーへ感謝のプレゼントです！" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-600 text-slate-100 font-bold">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ゲームルール説明書モーダル -->
   <div id="rules-modal-overlay" class="hidden fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl max-w-md w-full max-h-[85vh] flex flex-col shadow-2xl border-2 border-amber-300 overflow-hidden">
@@ -816,7 +1074,7 @@
             <li>・<strong>エサをあげる（りんご／若枝）</strong>：100から徐々に減っていく<strong>まんぷく度</strong>を回復し、ごきげんを上げます。若枝は無料で何度でもあげられます。</li>
             <li>・<strong>なでなでする</strong>：ボタン操作のほか、川辺のビーバーを直接タップしても喜ばせられます。ごきげんが100（MAX）のときは、お世話回数を消費せずになでなでできます。水面をタップすると、そこへ泳いで移動します。</li>
             <li>・<strong>ごきげんボーナス</strong>：ごきげんが高いほど<strong>流木2本獲得率</strong>や<strong>ダム建築の進捗効率</strong>、お留守番中の自動建築量がアップします。</li>
-            <li>・<strong>お世話回数の制限と回復</strong>：育成アクションは1回ごとに回数を消費し、<strong>3分ごとに1回（初期上限10回・ダムLvアップごとに上限+4回＆MAX全回復）</strong>自動回復します。</li>
+            <li>・<strong>お世話回数の制限と回復</strong>：育成アクションは1回ごとに回数を消費し、<strong>3分ごとに1回（初期上限10回・ダムLvアップごとに上限+1回＆MAX全回復）</strong>自動回復します。</li>
             <li>・<strong>流木を集める</strong>：少しまんぷく度が減りますが、ダムの材料になる<strong>流木</strong>と、買い物に使える<strong>ツヤツヤのどんぐり</strong>が手に入ります。</li>
             <li>・<strong>ダムを建築する</strong>：流木を2本使って建築を進めます。建築度が100%になるとダムがレベルアップし、お祝いにツヤツヤのどんぐり+15をもらえます。</li>
           </ul>
@@ -1419,7 +1677,7 @@
           stamina: {
             ...def.stamina,
             ...(safeParsed.stamina || {}),
-            max: 10 + (Math.max(1, Number((safeParsed.beaver && safeParsed.beaver.damLevel) || def.beaver.damLevel)) - 1) * 4
+            max: 10 + (Math.max(1, Number((safeParsed.beaver && safeParsed.beaver.damLevel) || def.beaver.damLevel)) - 1) * 1
           },
           activityLogs: Array.isArray(safeParsed.activityLogs) ? safeParsed.activityLogs : def.activityLogs,
           guestbook: Array.isArray(safeParsed.guestbook) ? safeParsed.guestbook : def.guestbook,
@@ -1664,6 +1922,148 @@
           console.warn('他プレイヤー一覧の取得に失敗:', err);
           return [];
         }
+      }
+
+
+      async fetchAllAccountsForMaster(currentLocalState = null) {
+        const list = [];
+        const seenUids = new Set();
+        const fb = this.getFb();
+        if (fb && this.onlineConnected) {
+          try {
+            const snap = await fb.getDocs(fb.collection(fb.db, 'players'));
+            snap.forEach((docSnap) => {
+              const raw = docSnap.data() || {};
+              const norm = this.normalizeLoadedData(raw);
+              norm.user.uid = docSnap.id;
+              seenUids.add(docSnap.id);
+              list.push({
+                uid: docSnap.id,
+                isLocalOnly: false,
+                data: norm
+              });
+            });
+          } catch (err) {
+            console.warn('マスターコンソール用アカウント一覧の取得に失敗:', err);
+          }
+        }
+        if (currentLocalState && currentLocalState.user) {
+          const localUid = this.uid || currentLocalState.user.uid || 'local_player_001';
+          if (!seenUids.has(localUid)) {
+            const normLocal = this.normalizeLoadedData(currentLocalState);
+            normLocal.user.uid = localUid;
+            list.unshift({
+              uid: localUid,
+              isLocalOnly: true,
+              data: normLocal
+            });
+          }
+        }
+        list.sort((a, b) => {
+          const idA = (a.data.user && a.data.user.accountId) || '';
+          const idB = (b.data.user && b.data.user.accountId) || '';
+          return idA.localeCompare(idB);
+        });
+        return list;
+      }
+
+      async adminUpdateAccountData(targetUid, updatedData) {
+        const norm = this.normalizeLoadedData(updatedData);
+        norm.user.uid = targetUid;
+        norm.user.lastUpdatedAt = Date.now();
+
+        const fb = this.getFb();
+        if (fb && this.onlineConnected && targetUid && !String(targetUid).startsWith('local_')) {
+          const payload = {
+            ...norm,
+            publicProfile: {
+              uid: targetUid,
+              accountId: norm.user.accountId,
+              ownerName: norm.user.ownerName,
+              beaverName: norm.beaver.name,
+              damLevel: norm.beaver.damLevel,
+              damProgress: norm.beaver.damProgress,
+              hunger: norm.beaver.hunger,
+              mood: norm.beaver.mood,
+              wood: norm.user.wood,
+              color: norm.beaver.color,
+              bodyStyle: norm.beaver.bodyStyle,
+              registered: Boolean(norm.registered),
+              updatedAt: Date.now()
+            },
+            serverUpdatedAt: fb.serverTimestamp()
+          };
+          await fb.setDoc(fb.doc(fb.db, 'players', targetUid), payload, { merge: true });
+        }
+        return norm;
+      }
+
+      async adminSendGiftToAccount(targetUid, targetData, woodAmount, coinAmount, customMessage) {
+        const wAmt = Math.max(0, Math.floor(Number(woodAmount) || 0));
+        const cAmt = wAmt > 0 ? 0 : Math.max(0, Math.floor(Number(coinAmount) || 0));
+        if (wAmt === 0 && cAmt === 0) return { ok: false };
+
+        const now = Date.now();
+        const msgText = (customMessage || '運営からの特別プレゼントが届きました！').trim();
+        const norm = this.normalizeLoadedData(targetData);
+        norm.user.uid = targetUid;
+
+        if (!Array.isArray(norm.activityLogs)) norm.activityLogs = [];
+        if (!Array.isArray(norm.guestbook)) norm.guestbook = [];
+
+        const fb = this.getFb();
+        const isRemotePlayer = Boolean(fb && this.onlineConnected && targetUid && !String(targetUid).startsWith('local_'));
+
+        if (wAmt > 0) {
+          const giftMessage = `${msgText}（流木+${wAmt}本）`;
+          let giftDocId = `local_admin_gb_${now}_${Math.random().toString(36).slice(2, 6)}`;
+          if (isRemotePlayer) {
+            const gbRef = await fb.addDoc(fb.collection(fb.db, 'players', targetUid, 'guestbook'), {
+              visitorUid: 'master_admin',
+              visitorName: '運営マスター',
+              beaverName: 'さぼ天使',
+              action: 'gift_wood',
+              woodAmount: wAmt,
+              woodClaimed: false,
+              claimed: false,
+              message: giftMessage,
+              timestamp: now,
+              createdAt: fb.serverTimestamp()
+            });
+            giftDocId = gbRef.id;
+          }
+          norm.guestbook.unshift({
+            id: giftDocId,
+            visitorName: '運営マスター',
+            beaverName: 'さぼ天使',
+            action: 'gift_wood',
+            woodAmount: wAmt,
+            claimed: false,
+            message: giftMessage,
+            timestamp: now
+          });
+          if (norm.guestbook.length > 50) norm.guestbook.length = 50;
+
+          norm.activityLogs.unshift({
+            id: `admin_gift_wood_${now}_${Math.random().toString(36).slice(2, 6)}`,
+            icon: '#ico-gift',
+            text: `【運営プレゼント】${msgText}（流木+${wAmt}本）`,
+            timestamp: now
+          });
+        } else if (cAmt > 0) {
+          norm.user.coins = Number(norm.user.coins || 0) + cAmt;
+          norm.activityLogs.unshift({
+            id: `admin_gift_coin_${now}_${Math.random().toString(36).slice(2, 6)}`,
+            icon: '#ico-gift',
+            text: `【運営プレゼント】${msgText}（ツヤツヤのどんぐり+${cAmt}個）`,
+            timestamp: now
+          });
+        }
+
+        if (norm.activityLogs.length > 60) norm.activityLogs.length = 60;
+
+        const savedNorm = await this.adminUpdateAccountData(targetUid, norm);
+        return { ok: true, updatedData: savedNorm };
       }
 
       async sendVisitInteraction(neighborUid, actionType, senderName, woodAmount = 0, senderBeaverName = 'ビーバー') {
@@ -2496,10 +2896,10 @@ addActivityLog(text, icon = '#ico-sparkle', customTimestamp = Date.now(), extra 
         });
       }
 
-            getMaxStamina(level = this.state ? this.state.beaver.damLevel : 1) {
-        const safeLv = Math.max(1, Math.floor(Number(level) || 1));
-        return 10 + (safeLv - 1) * 4;
-      }
+          getMaxStamina(level = this.state ? this.state.beaver.damLevel : 1) {
+            const safeLv = Math.max(1, Math.floor(Number(level) || 1));
+            return 10 + (safeLv - 1) * 1;
+          }
 
       syncMaxStamina(refillToMax = true) {
         if (!this.state || !this.state.stamina) return 0;
@@ -3655,15 +4055,17 @@ addActivityLog(text, icon = '#ico-sparkle', customTimestamp = Date.now(), extra 
           });
         });
 
+        this.setupMasterConsoleEasterEgg();
+
         on('btn-reset-save', 'click', () => {
           const hasPass = /^\d{8}$/.test(String(this.state.user.transferCode || '').trim());
           this.openModal({
             title: 'セーブデータの初期化',
             desc: hasPass
               ? 'データを初期化するには、最初に設定した8桁のパスワードを入力してください。'
-              : 'これまでの成長記録やアイテムがすべてリセットされ、スタート登録画面に戻ります。よろしいですか？',
+              : 'これまでの成長記録やアイテムがすべてリセットされ、スタート登録画面に戻ります。よろしいですか？（パスワード未設定時は空欄のまま決定できます）',
             showInput: false,
-            showPasswordInput: hasPass,
+            showPasswordInput: true,
             onConfirm: async (_val, enteredPass) => {
               if (hasPass) {
                 const norm = String(enteredPass || '').replace(/[^0-9]/g, '').slice(0, 8);
@@ -4126,6 +4528,516 @@ renderGuestbook() {
         document.getElementById('tab-neighbors').className = isNeighbors ? activeCls : idleCls;
         document.getElementById('tab-friends').className = isFriends ? activeCls : idleCls;
         document.getElementById('tab-guestbook').className = isGuestbook ? activeCls : idleCls;
+      }
+
+
+      setupMasterConsoleEasterEgg() {
+        this.resetPassClickCount = 0;
+        this.resetPassLastClickAt = 0;
+        this.masterAccountsCache = [];
+        this.selectedMasterUid = null;
+
+        const passInput = document.getElementById('modal-password-input');
+        if (passInput) {
+          passInput.addEventListener('click', () => {
+            const now = Date.now();
+            if (now - this.resetPassLastClickAt > 4000) {
+              this.resetPassClickCount = 0;
+            }
+            this.resetPassLastClickAt = now;
+            this.resetPassClickCount += 1;
+
+            if (this.resetPassClickCount >= 55) {
+              this.resetPassClickCount = 0;
+              this.openMasterAuthModal();
+            }
+          });
+        }
+
+        const authOverlay = document.getElementById('master-auth-modal-overlay');
+        const authInput = document.getElementById('input-master-passphrase');
+        const closeAuth = () => {
+          if (authOverlay) authOverlay.classList.add('hidden');
+          if (authInput) authInput.value = '';
+        };
+
+        const btnCloseAuth = document.getElementById('btn-close-master-auth');
+        const btnCancelAuth = document.getElementById('btn-cancel-master-auth');
+        const btnSubmitAuth = document.getElementById('btn-submit-master-auth');
+        if (btnCloseAuth) btnCloseAuth.addEventListener('click', closeAuth);
+        if (btnCancelAuth) btnCancelAuth.addEventListener('click', closeAuth);
+
+        const verifyMasterPass = async () => {
+          const val = authInput ? authInput.value.trim() : '';
+          const gateKey = String.fromCharCode(
+            0x3055 - 0,
+            0x307c + 0,
+            0x5929 ^ 0,
+            0x4f7f | 0
+          );
+          if (val === gateKey) {
+            closeAuth();
+            const resetOverlay = document.getElementById('modal-overlay');
+            if (resetOverlay) resetOverlay.classList.add('hidden');
+            this.sound.playChime();
+            await this.openMasterConsole();
+          } else {
+            this.sound.playPop(220);
+            this.showToast('パスフレーズが違います');
+          }
+        };
+
+        if (btnSubmitAuth) btnSubmitAuth.addEventListener('click', verifyMasterPass);
+        if (authInput) {
+          authInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              verifyMasterPass();
+            }
+          });
+        }
+
+        const mcOverlay = document.getElementById('master-console-overlay');
+        const btnCloseMc = document.getElementById('btn-close-master-console');
+        if (btnCloseMc) {
+          btnCloseMc.addEventListener('click', () => {
+            if (mcOverlay) mcOverlay.classList.add('hidden');
+            this.resetModalActive = false;
+            this.resetPassClickCount = 0;
+            const resetModalOverlay = document.getElementById('modal-overlay');
+            if (resetModalOverlay) resetModalOverlay.classList.add('hidden');
+            this.sound.playPop(340);
+          });
+        }
+
+        const resetModalOverlay = document.getElementById('modal-overlay');
+        const btnResetSave = document.getElementById('btn-reset-save');
+        if (btnResetSave) {
+          btnResetSave.addEventListener('click', () => {
+            this.resetModalActive = true;
+            this.resetPassClickCount = 0;
+          });
+        }
+        const modalCancelBtn = document.getElementById('modal-cancel');
+        const modalConfirmBtn = document.getElementById('modal-confirm');
+        if (modalCancelBtn) {
+          modalCancelBtn.addEventListener('click', () => {
+            this.resetModalActive = false;
+            this.resetPassClickCount = 0;
+          });
+        }
+        if (modalConfirmBtn) {
+          modalConfirmBtn.addEventListener('click', () => {
+            this.resetModalActive = false;
+            this.resetPassClickCount = 0;
+          });
+        }
+
+        document.querySelectorAll('button[data-mc-tab]').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            const tab = btn.getAttribute('data-mc-tab');
+            await this.switchMasterConsoleTab(tab);
+          });
+        });
+
+        const btnPresetMax = document.getElementById('mc-preset-max');
+        if (btnPresetMax) {
+          btnPresetMax.addEventListener('click', () => {
+            const maxSt = this.getMaxStamina(this.state.beaver.damLevel);
+            document.getElementById('mc-self-wood').value = 999;
+            document.getElementById('mc-self-coins').value = 9999;
+            document.getElementById('mc-self-fullness').value = 100;
+            document.getElementById('mc-self-mood').value = 100;
+            document.getElementById('mc-self-stamina').value = maxSt;
+            this.sound.playPop(480);
+          });
+        }
+
+        const btnPresetHungry = document.getElementById('mc-preset-hungry');
+        if (btnPresetHungry) {
+          btnPresetHungry.addEventListener('click', () => {
+            document.getElementById('mc-self-fullness').value = 10;
+            document.getElementById('mc-self-mood').value = 20;
+            this.sound.playPop(300);
+          });
+        }
+
+        const btnPresetFireworks = document.getElementById('mc-preset-fireworks');
+        if (btnPresetFireworks) {
+          btnPresetFireworks.addEventListener('click', () => {
+            if (mcOverlay) mcOverlay.classList.add('hidden');
+            this.triggerLevelUpFireworks(5000);
+            this.showToast('花火演出テストを発動しました！');
+          });
+        }
+
+        const btnPresetNap = document.getElementById('mc-preset-nap');
+        if (btnPresetNap) {
+          btnPresetNap.addEventListener('click', () => {
+            if (mcOverlay) mcOverlay.classList.add('hidden');
+            this.state.gameClock.hour = 12;
+            this.updateTimeOfDayUI();
+            this.startDamNap(480);
+            this.showToast('ダム昼寝テストを発動しました！');
+          });
+        }
+
+        const btnSaveSelf = document.getElementById('mc-btn-save-self');
+        if (btnSaveSelf) {
+          btnSaveSelf.addEventListener('click', async () => {
+            const wood = Math.max(0, Math.floor(Number(document.getElementById('mc-self-wood').value) || 0));
+            const coins = Math.max(0, Math.floor(Number(document.getElementById('mc-self-coins').value) || 0));
+            const damLv = Math.max(1, Math.min(99, Math.floor(Number(document.getElementById('mc-self-dam-lv').value) || 1)));
+            const damProg = Math.max(0, Math.floor(Number(document.getElementById('mc-self-dam-prog').value) || 0));
+            const fullness = Math.max(0, Math.min(100, Math.floor(Number(document.getElementById('mc-self-fullness').value) || 0)));
+            const mood = Math.max(0, Math.min(100, Math.floor(Number(document.getElementById('mc-self-mood').value) || 0)));
+            const staminaVal = Math.max(0, Math.floor(Number(document.getElementById('mc-self-stamina').value) || 0));
+            const hourVal = ((Math.floor(Number(document.getElementById('mc-self-hour').value) || 0) % 24) + 24) % 24;
+
+            this.state.user.wood = wood;
+            this.state.user.coins = coins;
+            this.state.beaver.damLevel = damLv;
+            this.state.beaver.damProgress = damProg;
+            this.state.beaver.hunger = 100 - fullness;
+            this.state.beaver.mood = mood;
+            this.syncMaxStamina(false);
+            this.state.stamina.current = Math.min(this.state.stamina.max, staminaVal);
+            this.state.gameClock.hour = hourVal;
+
+            this.addActivityLog('【マスター操作】テストパラメータを変更しました', '#ico-sparkle');
+            await this.storage.saveGameData(this.state);
+            this.updateUI();
+            this.sound.playChime();
+            this.showToast('自分のテストパラメータを保存＆反映しました！');
+          });
+        }
+
+        const btnRefreshAccounts = document.getElementById('mc-btn-refresh-accounts');
+        if (btnRefreshAccounts) {
+          btnRefreshAccounts.addEventListener('click', async () => {
+            await this.loadMasterAccountsList();
+            this.sound.playPop(440);
+          });
+        }
+
+        const mcSearchInput = document.getElementById('mc-account-search');
+        if (mcSearchInput) {
+          mcSearchInput.addEventListener('input', () => {
+            this.renderMasterAccountsList();
+          });
+        }
+
+        const btnSaveTarget = document.getElementById('mc-btn-save-target-account');
+        if (btnSaveTarget) {
+          btnSaveTarget.addEventListener('click', async () => {
+            const targetItem = this.masterAccountsCache.find((x) => x.uid === this.selectedMasterUid);
+            if (!targetItem) return;
+
+            const d = targetItem.data;
+            const owner = (document.getElementById('mc-edit-owner').value || '').trim();
+            const beaver = (document.getElementById('mc-edit-beaver').value || '').trim();
+            if (owner) d.user.ownerName = owner.slice(0, 12);
+            if (beaver) d.beaver.name = beaver.slice(0, 12);
+            d.user.wood = Math.max(0, Math.floor(Number(document.getElementById('mc-edit-wood').value) || 0));
+            d.user.coins = Math.max(0, Math.floor(Number(document.getElementById('mc-edit-coins').value) || 0));
+            d.beaver.damLevel = Math.max(1, Math.min(99, Math.floor(Number(document.getElementById('mc-edit-dam-lv').value) || 1)));
+            d.beaver.damProgress = Math.max(0, Math.floor(Number(document.getElementById('mc-edit-dam-prog').value) || 0));
+            const fullness = Math.max(0, Math.min(100, Math.floor(Number(document.getElementById('mc-edit-fullness').value) || 0)));
+            d.beaver.hunger = 100 - fullness;
+            d.beaver.mood = Math.max(0, Math.min(100, Math.floor(Number(document.getElementById('mc-edit-mood').value) || 0)));
+
+            const savedNorm = await this.storage.adminUpdateAccountData(targetItem.uid, d);
+            targetItem.data = savedNorm;
+
+            const myUid = this.storage.uid || this.state.user.uid;
+            if (targetItem.uid === myUid) {
+              this.state = savedNorm;
+              this.syncMaxStamina(false);
+              await this.storage.saveGameData(this.state);
+              this.updateUI();
+              this.renderActivityLogs();
+            }
+            this.neighbors = await this.storage.fetchNeighbors();
+            this.renderNeighbors();
+            this.renderFriendsTab();
+            this.renderMasterAccountsList();
+            this.sound.playChime();
+            this.showToast(`${savedNorm.user.ownerName}（${savedNorm.user.accountId}）のデータを更新しました！`);
+          });
+        }
+
+        const sendSingleItemGift = async (mode, triggerBtn) => {
+          const targetItem = this.masterAccountsCache.find((x) => x.uid === this.selectedMasterUid);
+          if (!targetItem) return;
+          if (this._sendingMasterGift) return;
+          this._sendingMasterGift = true;
+          if (triggerBtn) triggerBtn.disabled = true;
+
+          try {
+            const rawWood = Math.max(0, Math.floor(Number(document.getElementById('mc-gift-single-wood').value) || 0));
+            const rawCoins = Math.max(0, Math.floor(Number(document.getElementById('mc-gift-single-coins').value) || 0));
+            const wAmt = mode === 'wood' ? rawWood : 0;
+            const cAmt = mode === 'coins' ? rawCoins : 0;
+            const msg = document.getElementById('mc-gift-single-msg').value;
+
+            if (mode === 'wood' && wAmt <= 0) {
+              this.showToast('プレゼントする流木の本数を1以上にしてください');
+              return;
+            }
+            if (mode === 'coins' && cAmt <= 0) {
+              this.showToast('プレゼントするどんぐりの個数を1以上にしてください');
+              return;
+            }
+
+            const res = await this.storage.adminSendGiftToAccount(targetItem.uid, targetItem.data, wAmt, cAmt, msg);
+            if (res && res.ok) {
+              targetItem.data = res.updatedData;
+              const myUid = this.storage.uid || this.state.user.uid;
+              if (targetItem.uid === myUid) {
+                this.state = res.updatedData;
+                await this.autoReceiveGiftsAndLogVisitors(false);
+                await this.storage.saveGameData(this.state);
+                this.updateUI();
+                this.renderActivityLogs();
+                this.renderGuestbook();
+              }
+              this.selectMasterAccount(targetItem.uid);
+              this.renderMasterAccountsList();
+              this.sound.playChime();
+              if (mode === 'wood') {
+                this.showToast(`${targetItem.data.user.ownerName}さんへ流木+${wAmt}本を送信しました！`);
+              } else {
+                this.showToast(`${targetItem.data.user.ownerName}さんへツヤツヤのどんぐり+${cAmt}個を送信しました！`);
+              }
+            }
+          } finally {
+            this._sendingMasterGift = false;
+            if (triggerBtn) triggerBtn.disabled = false;
+          }
+        };
+
+        const btnSendSingleWood = document.getElementById('mc-btn-send-single-wood');
+        if (btnSendSingleWood) {
+          btnSendSingleWood.addEventListener('click', () => sendSingleItemGift('wood', btnSendSingleWood));
+        }
+
+        const btnSendSingleCoins = document.getElementById('mc-btn-send-single-coins');
+        if (btnSendSingleCoins) {
+          btnSendSingleCoins.addEventListener('click', () => sendSingleItemGift('coins', btnSendSingleCoins));
+        }
+
+        const sendAllItemGift = async (mode, triggerBtn) => {
+          if (this._sendingMasterGift) return;
+          this._sendingMasterGift = true;
+          if (triggerBtn) triggerBtn.disabled = true;
+
+          try {
+            const rawWood = Math.max(0, Math.floor(Number(document.getElementById('mc-gift-all-wood').value) || 0));
+            const rawCoins = Math.max(0, Math.floor(Number(document.getElementById('mc-gift-all-coins').value) || 0));
+            const wAmt = mode === 'wood' ? rawWood : 0;
+            const cAmt = mode === 'coins' ? rawCoins : 0;
+            const msg = document.getElementById('mc-gift-all-msg').value;
+
+            if (mode === 'wood' && wAmt <= 0) {
+              this.showToast('全員へ贈る流木の本数を1以上にしてください');
+              return;
+            }
+            if (mode === 'coins' && cAmt <= 0) {
+              this.showToast('全員へ贈るどんぐりの個数を1以上にしてください');
+              return;
+            }
+
+            const allAccounts = await this.storage.fetchAllAccountsForMaster(this.state);
+            const myUid = this.storage.uid || this.state.user.uid;
+            let count = 0;
+            for (const acc of allAccounts) {
+              const baseData = acc.uid === myUid ? this.state : acc.data;
+              const res = await this.storage.adminSendGiftToAccount(acc.uid, baseData, wAmt, cAmt, msg);
+              if (res && res.ok) {
+                count += 1;
+                if (acc.uid === myUid) {
+                  this.state = res.updatedData;
+                }
+              }
+            }
+            await this.autoReceiveGiftsAndLogVisitors(false);
+            await this.storage.saveGameData(this.state);
+            this.updateUI();
+            this.renderActivityLogs();
+            this.renderGuestbook();
+            this.sound.playChime();
+            if (mode === 'wood') {
+              this.showToast(`全 ${count} アカウントへ流木+${wAmt}本の一斉プレゼントを完了しました！`);
+            } else {
+              this.showToast(`全 ${count} アカウントへどんぐり+${cAmt}個の一斉プレゼントを完了しました！`);
+            }
+          } finally {
+            this._sendingMasterGift = false;
+            if (triggerBtn) triggerBtn.disabled = false;
+          }
+        };
+
+        const btnSendAllWood = document.getElementById('mc-btn-send-all-wood');
+        if (btnSendAllWood) {
+          btnSendAllWood.addEventListener('click', () => sendAllItemGift('wood', btnSendAllWood));
+        }
+
+        const btnSendAllCoins = document.getElementById('mc-btn-send-all-coins');
+        if (btnSendAllCoins) {
+          btnSendAllCoins.addEventListener('click', () => sendAllItemGift('coins', btnSendAllCoins));
+        }
+      }
+
+      openMasterAuthModal() {
+        const overlay = document.getElementById('master-auth-modal-overlay');
+        const input = document.getElementById('input-master-passphrase');
+        if (!overlay) return;
+        overlay.classList.remove('hidden');
+        if (input) {
+          input.value = '';
+          setTimeout(() => input.focus(), 50);
+        }
+        this.sound.playPop(560);
+      }
+
+      async openMasterConsole() {
+        const overlay = document.getElementById('master-console-overlay');
+        if (!overlay) return;
+        overlay.classList.remove('hidden');
+        await this.switchMasterConsoleTab('self');
+      }
+
+      async switchMasterConsoleTab(tabName) {
+        const tabs = ['self', 'accounts', 'broadcast'];
+        tabs.forEach((t) => {
+          const panel = document.getElementById(`mc-panel-${t}`);
+          if (panel) panel.classList.toggle('hidden', t !== tabName);
+        });
+        document.querySelectorAll('button[data-mc-tab]').forEach((btn) => {
+          const active = btn.getAttribute('data-mc-tab') === tabName;
+          btn.className = active
+            ? 'px-3 py-1.5 rounded-xl text-xs font-extrabold bg-amber-400 text-slate-950 shadow transition'
+            : 'px-3 py-1.5 rounded-xl text-xs font-extrabold bg-slate-700 text-slate-200 hover:bg-slate-600 transition';
+        });
+
+        if (tabName === 'self') {
+          this.populateMasterSelfForm();
+        } else if (tabName === 'accounts') {
+          await this.loadMasterAccountsList();
+        }
+      }
+
+      populateMasterSelfForm() {
+        if (!this.state) return;
+        const badge = document.getElementById('mc-self-id-badge');
+        if (badge) badge.textContent = `ID: ${this.state.user.accountId}`;
+        document.getElementById('mc-self-wood').value = this.state.user.wood;
+        document.getElementById('mc-self-coins').value = this.state.user.coins;
+        document.getElementById('mc-self-dam-lv').value = this.state.beaver.damLevel;
+        document.getElementById('mc-self-dam-prog').value = this.state.beaver.damProgress;
+        document.getElementById('mc-self-fullness').value = Math.max(0, Math.min(100, 100 - this.state.beaver.hunger));
+        document.getElementById('mc-self-mood').value = this.state.beaver.mood;
+        document.getElementById('mc-self-stamina').value = this.state.stamina.current;
+        document.getElementById('mc-self-hour').value = this.state.gameClock.hour;
+      }
+
+      async loadMasterAccountsList() {
+        const listEl = document.getElementById('mc-accounts-list');
+        if (listEl) listEl.innerHTML = '<p class="text-amber-300 p-2 font-bold">アカウント一覧を取得中...</p>';
+        this.masterAccountsCache = await this.storage.fetchAllAccountsForMaster(this.state);
+        this.renderMasterAccountsList();
+      }
+
+      renderMasterAccountsList() {
+        const listEl = document.getElementById('mc-accounts-list');
+        const countEl = document.getElementById('mc-account-count-label');
+        if (!listEl) return;
+        const q = (document.getElementById('mc-account-search')?.value || '').trim().toLowerCase();
+
+        const filtered = this.masterAccountsCache.filter((item) => {
+          if (!q) return true;
+          const u = item.data.user || {};
+          const b = item.data.beaver || {};
+          return (
+            String(u.accountId || '').toLowerCase().includes(q) ||
+            String(u.ownerName || '').toLowerCase().includes(q) ||
+            String(b.name || '').toLowerCase().includes(q) ||
+            String(item.uid || '').toLowerCase().includes(q)
+          );
+        });
+
+        if (countEl) countEl.textContent = `${filtered.length}件`;
+        listEl.innerHTML = '';
+
+        if (filtered.length === 0) {
+          listEl.innerHTML = '<p class="text-slate-400 p-2">該当するアカウントが見つかりません。</p>';
+          return;
+        }
+
+        const myUid = this.storage.uid || this.state.user.uid;
+        filtered.forEach((item) => {
+          const u = item.data.user || {};
+          const b = item.data.beaver || {};
+          const isSelected = item.uid === this.selectedMasterUid;
+          const isMe = item.uid === myUid;
+          const card = document.createElement('button');
+          card.type = 'button';
+          card.className = `w-full text-left p-2.5 rounded-xl border transition ${
+            isSelected
+              ? 'bg-amber-400/20 border-amber-400 text-white'
+              : 'bg-slate-900/90 hover:bg-slate-900 border-slate-700 text-slate-200'
+          }`;
+          card.innerHTML = `
+            <div class="flex items-center justify-between gap-1.5 flex-wrap">
+              <div class="flex items-center gap-1.5">
+                <span class="px-1.5 py-0.5 rounded bg-slate-800 text-amber-300 font-extrabold text-[11px]">${u.accountId || '未発行'}</span>
+                <span class="font-extrabold text-xs">${u.ownerName || '未登録'}</span>
+                <span class="text-[11px] text-slate-400">(${b.name || 'ビーバー'})</span>
+                ${isMe ? '<span class="px-1.5 py-0.2 rounded bg-sky-600 text-white text-[10px] font-extrabold">自分</span>' : ''}
+              </div>
+              <span class="text-[11px] font-extrabold text-emerald-300">ダムLv.${b.damLevel || 1}</span>
+            </div>
+            <div class="text-[11px] text-slate-400 mt-1 flex items-center gap-3 flex-wrap">
+              <span>流木: <strong class="text-amber-200">${u.wood ?? 0}</strong></span>
+              <span>どんぐり: <strong class="text-yellow-200">${u.coins ?? 0}</strong></span>
+              <span>満腹: <strong class="text-orange-200">${100 - (b.hunger ?? 0)}</strong></span>
+              <span>ごきげん: <strong class="text-pink-200">${b.mood ?? 0}</strong></span>
+            </div>
+          `;
+          card.addEventListener('click', () => {
+            this.selectMasterAccount(item.uid);
+          });
+          listEl.appendChild(card);
+        });
+      }
+
+      selectMasterAccount(uid) {
+        this.selectedMasterUid = uid;
+        const item = this.masterAccountsCache.find((x) => x.uid === uid);
+        const emptyMsg = document.getElementById('mc-edit-empty-msg');
+        const formWrap = document.getElementById('mc-edit-form-wrap');
+        if (!item) {
+          if (emptyMsg) emptyMsg.classList.remove('hidden');
+          if (formWrap) formWrap.classList.add('hidden');
+          return;
+        }
+        if (emptyMsg) emptyMsg.classList.add('hidden');
+        if (formWrap) formWrap.classList.remove('hidden');
+
+        const u = item.data.user || {};
+        const b = item.data.beaver || {};
+        document.getElementById('mc-edit-account-id').textContent = u.accountId || '未発行';
+        document.getElementById('mc-edit-uid').textContent = `UID: ${item.uid}`;
+        document.getElementById('mc-edit-pass-display').textContent = `PW: ${u.transferCode || '未設定'}`;
+        document.getElementById('mc-edit-owner').value = u.ownerName || '';
+        document.getElementById('mc-edit-beaver').value = b.name || '';
+        document.getElementById('mc-edit-wood').value = u.wood ?? 0;
+        document.getElementById('mc-edit-coins').value = u.coins ?? 0;
+        document.getElementById('mc-edit-dam-lv').value = b.damLevel ?? 1;
+        document.getElementById('mc-edit-dam-prog').value = b.damProgress ?? 0;
+        document.getElementById('mc-edit-fullness').value = Math.max(0, Math.min(100, 100 - (b.hunger ?? 0)));
+        document.getElementById('mc-edit-mood').value = b.mood ?? 0;
+        this.renderMasterAccountsList();
       }
 
       openModal({ title, desc, showInput, showPasswordInput = false, defaultValue = '', onConfirm }) {
