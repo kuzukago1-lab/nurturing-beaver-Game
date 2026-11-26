@@ -4201,6 +4201,10 @@ addActivityLog(text, icon = '#ico-sparkle', customTimestamp = Date.now(), extra 
               await this.storage.saveGameData(this.state);
               this.syncStartScreenState();
               this.updateUI();
+              requestAnimationFrame(() => {
+                this.renderStartCustomizationOptions();
+                this.drawStartPreview();
+              });
               this.showToast(`${this.state.beaver.name}との川辺生活がスタートしました！`);
             } catch (err) {
               console.error('新規登録処理エラー:', err);
@@ -5347,12 +5351,16 @@ renderGuestbook() {
         const pCanvas = document.getElementById('start-beaver-preview-canvas');
         if (!pCanvas) return;
 
+        // データ初期化直後や親要素の表示切替直後でもサイズが0にならず確実に描画できるようフォールバックを確保
         const rect = pCanvas.getBoundingClientRect();
-        const pw = Math.max(200, rect.width || pCanvas.clientWidth || 320);
-        const ph = Math.max(96, rect.height || pCanvas.clientHeight || 116);
+        const parentRect = pCanvas.parentElement ? pCanvas.parentElement.getBoundingClientRect() : null;
+        const rawW = rect.width || pCanvas.clientWidth || (parentRect ? parentRect.width - 2 : 0) || 320;
+        const rawH = rect.height || pCanvas.clientHeight || (parentRect ? parentRect.height - 2 : 0) || 120;
+        const pw = Math.max(200, rawW);
+        const ph = Math.max(96, rawH);
         const dpr = Math.min(window.devicePixelRatio || 1, 2);
-        const targetW = Math.floor(pw * dpr);
-        const targetH = Math.floor(ph * dpr);
+        const targetW = Math.max(1, Math.floor(pw * dpr));
+        const targetH = Math.max(1, Math.floor(ph * dpr));
         if (pCanvas.width !== targetW || pCanvas.height !== targetH) {
           pCanvas.width = targetW;
           pCanvas.height = targetH;
@@ -5361,8 +5369,9 @@ renderGuestbook() {
         const pCtx = pCanvas.getContext('2d');
         if (!pCtx) return;
         pCtx.save();
+        pCtx.setTransform(1, 0, 0, 1, 0, 0);
+        pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
         pCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        pCtx.clearRect(0, 0, pw, ph);
 
         const waterY = ph * 0.56;
 
