@@ -1567,8 +1567,12 @@
             if (/^\d{8}$/.test(savedPass)) {
               foundAccount = true;
             }
-            if (!matchedDoc && savedPass === normalizedCode) {
-              matchedDoc = { id: docSnap.id, data: raw };
+            if (savedPass === normalizedCode) {
+              const curTs = Number((raw.user && raw.user.lastUpdatedAt) || (raw.publicProfile && raw.publicProfile.updatedAt) || 0);
+              const prevTs = matchedDoc ? Number((matchedDoc.data.user && matchedDoc.data.user.lastUpdatedAt) || (matchedDoc.data.publicProfile && matchedDoc.data.publicProfile.updatedAt) || 0) : -1;
+              if (!matchedDoc || curTs >= prevTs) {
+                matchedDoc = { id: docSnap.id, data: raw };
+              }
             }
           });
 
@@ -1605,6 +1609,46 @@
         } catch (err) {
           console.error('ログインデータの読み込みに失敗:', err);
           return { ok: false, message: `ログインエラー: ${err && err.message ? err.message : '通信に失敗しました'}` };
+        }
+      }
+
+      async deletePlayerDocumentCompletely(targetUid, expectedAccountId = null) {
+        const fb = this.getFb();
+        if (!fb || !this.onlineConnected || !targetUid || String(targetUid).startsWith('local_')) {
+          return false;
+        }
+        try {
+          const targetRef = fb.doc(fb.db, 'players', targetUid);
+          if (expectedAccountId) {
+            const snap = await fb.getDoc(targetRef);
+            if (!snap.exists()) return true;
+            const raw = snap.data() || {};
+            const docAccountId = String(
+              (raw.publicProfile && raw.publicProfile.accountId) ||
+              (raw.user && raw.user.accountId) ||
+              ''
+            ).trim().toUpperCase();
+            if (docAccountId && docAccountId !== String(expectedAccountId).trim().toUpperCase()) {
+              return false;
+            }
+          }
+          const gbSnap = await fb.getDocs(fb.collection(fb.db, 'players', targetUid, 'guestbook'));
+          if (gbSnap && !gbSnap.empty && typeof fb.deleteDoc === 'function') {
+            await Promise.all(gbSnap.docs.map((d) => fb.deleteDoc(d.ref)));
+          }
+          if (typeof fb.deleteDoc === 'function') {
+            await fb.deleteDoc(targetRef);
+          } else {
+            await fb.setDoc(targetRef, {
+              registered: false,
+              migratedToUid: this.uid || null,
+              publicProfile: { registered: false, accountId: '', updatedAt: Date.now() }
+            }, { merge: true });
+          }
+          return true;
+        } catch (err) {
+          console.warn('移行元アカウントドキュメントの削除に失敗:', err);
+          return false;
         }
       }
 
@@ -1883,15 +1927,17 @@
         return fresh;
       }
 
-      async fetchNeighbors() {
+      async fetchNeighbors(myAccountId = null) {
         const fb = this.getFb();
         if (!fb || !this.onlineConnected) {
           return [];
         }
 
+        const normalizedMyAccountId = String(myAccountId || '').trim().toUpperCase();
+
         try {
           const snap = await fb.getDocs(fb.collection(fb.db, 'players'));
-          const onlineNeighbors = [];
+          const dedupByAccountId = new Map();
           snap.forEach((docSnap) => {
             if (docSnap.id === this.uid) return;
             const raw = docSnap.data() || {};
@@ -1902,10 +1948,15 @@
             if (!isRegistered) return;
             const ownerName = prof.ownerName || userObj.ownerName;
             const beaverName = prof.beaverName || beaverObj.name;
-            const accountId = prof.accountId || userObj.accountId;
-            if (!ownerName || !beaverName || !accountId) return;
+            const rawAccountId = prof.accountId || userObj.accountId;
+            if (!ownerName || !beaverName || !rawAccountId) return;
 
-            onlineNeighbors.push({
+            const accountId = String(rawAccountId).trim().toUpperCase();
+            // 自分と同じアカウントIDはよその川辺に表示しない
+            if (normalizedMyAccountId && accountId === normalizedMyAccountId) return;
+
+            const updatedAt = Number(prof.updatedAt ?? userObj.lastUpdatedAt ?? 0);
+            const candidate = {
               uid: docSnap.id,
               accountId,
               ownerName,
@@ -1919,10 +1970,17 @@
               color: prof.color || beaverObj.color || '#9a5b25',
               bodyStyle: prof.bodyStyle || beaverObj.bodyStyle || null,
               comment: 'オンライン川辺で活動中！',
-              visitedToday: false
-            });
+              visitedToday: false,
+              _updatedAt: updatedAt
+            };
+
+            // 同じアカウントIDが複数残っていた場合は最新の1件だけ残して重複排除
+            const existing = dedupByAccountId.get(accountId);
+            if (!existing || candidate._updatedAt >= existing._updatedAt) {
+              dedupByAccountId.set(accountId, candidate);
+            }
           });
-          return onlineNeighbors;
+          return Array.from(dedupByAccountId.values()).map(({ _updatedAt, ...item }) => item);
         } catch (err) {
           console.warn('他プレイヤー一覧の取得に失敗:', err);
           return [];
@@ -1931,7 +1989,7 @@
 
 
       async fetchAllAccountsForMaster(currentLocalState = null) {
-        const list = [];
+        const rawList = [];
         const seenUids = new Set();
         const fb = this.getFb();
         if (fb && this.onlineConnected) {
@@ -1942,7 +2000,7 @@
               const norm = this.normalizeLoadedData(raw);
               norm.user.uid = docSnap.id;
               seenUids.add(docSnap.id);
-              list.push({
+              rawList.push({
                 uid: docSnap.id,
                 isLocalOnly: false,
                 data: norm
@@ -1957,13 +2015,31 @@
           if (!seenUids.has(localUid)) {
             const normLocal = this.normalizeLoadedData(currentLocalState);
             normLocal.user.uid = localUid;
-            list.unshift({
+            rawList.unshift({
               uid: localUid,
               isLocalOnly: true,
               data: normLocal
             });
           }
         }
+
+        // 同じアカウントIDの残骸がある場合は最新の1件だけを残す
+        const dedupByAcc = new Map();
+        rawList.forEach((item) => {
+          const accId = String((item.data.user && item.data.user.accountId) || '').trim().toUpperCase();
+          if (!accId) {
+            dedupByAcc.set(item.uid, item);
+            return;
+          }
+          const prev = dedupByAcc.get(accId);
+          const curTs = Number((item.data.user && item.data.user.lastUpdatedAt) || 0);
+          const prevTs = prev ? Number((prev.data.user && prev.data.user.lastUpdatedAt) || 0) : -1;
+          if (!prev || curTs >= prevTs) {
+            dedupByAcc.set(accId, item);
+          }
+        });
+
+        const list = Array.from(dedupByAcc.values());
         list.sort((a, b) => {
           const idA = (a.data.user && a.data.user.accountId) || '';
           const idB = (b.data.user && b.data.user.accountId) || '';
@@ -2202,7 +2278,7 @@
 
       async init() {
         this.state = await this.storage.loadGameData();
-        this.neighbors = await this.storage.fetchNeighbors();
+        this.neighbors = await this.storage.fetchNeighbors(this.state && this.state.user ? this.state.user.accountId : null);
         const validUids = new Set(this.neighbors.map((n) => n.uid));
         if (Array.isArray(this.state.user.favoriteIds)) {
           this.state.user.favoriteIds = this.state.user.favoriteIds.filter((id) => validUids.has(id));
@@ -2705,11 +2781,53 @@
           }
 
           const currentUid = this.storage.uid || this.state.user.uid;
+          const sourceUid = res.sourceUid;
           const imported = this.storage.normalizeLoadedData(res.data);
           imported.registered = true;
           imported.user.uid = currentUid;
           imported.user.accountId = fullId;
           imported.user.transferCode = code;
+
+          // 移行元端末のFirestoreゲストブックに未受取プレゼントが残っていれば引き継ぐ
+          const fb = this.storage.getFb();
+          if (fb && this.storage.onlineConnected && sourceUid && sourceUid !== currentUid && !String(sourceUid).startsWith('local_')) {
+            try {
+              const oldGbSnap = await fb.getDocs(fb.collection(fb.db, 'players', sourceUid, 'guestbook'));
+              if (oldGbSnap && !oldGbSnap.empty) {
+                const gbMap = new Map();
+                (imported.guestbook || []).forEach((g) => {
+                  if (g && g.id) gbMap.set(g.id, { ...g });
+                });
+                const claimedSet = new Set(Array.isArray(imported.claimedGiftIds) ? imported.claimedGiftIds : []);
+                oldGbSnap.forEach((docSnap) => {
+                  const d = docSnap.data() || {};
+                  const docId = docSnap.id;
+                  const action = d.action || 'visit';
+                  const wAmt = action === 'gift_wood' ? Math.max(1, Number(d.woodAmount) || 1) : 0;
+                  const isClaimed = action === 'gift_wood'
+                    ? Boolean(d.woodClaimed || d.claimed || claimedSet.has(docId))
+                    : true;
+                  if (isClaimed && action === 'gift_wood') claimedSet.add(docId);
+                  gbMap.set(docId, {
+                    id: docId,
+                    visitorName: d.visitorName || 'ななしの訪問者',
+                    beaverName: d.beaverName || 'ビーバー',
+                    action,
+                    woodAmount: wAmt,
+                    claimed: isClaimed,
+                    message: d.message || '遊びに来たよ！',
+                    timestamp: Number(d.timestamp || Date.now())
+                  });
+                });
+                imported.claimedGiftIds = Array.from(claimedSet).slice(-300);
+                imported.guestbook = Array.from(gbMap.values())
+                  .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
+                  .slice(0, 50);
+              }
+            } catch (gbMigrateErr) {
+              console.warn('移行元ゲストブックの引き継ぎをスキップ:', gbMigrateErr);
+            }
+          }
 
           this.state = imported;
           this.visitingTarget = null;
@@ -2727,7 +2845,14 @@
           this.syncMaxStamina(false);
           this.addActivityLog(`ID「${fullId}」と8桁パスワードでログインしました！`, '#ico-sparkle');
           await this.storage.saveGameData(this.state);
-          this.neighbors = await this.storage.fetchNeighbors();
+          await this.storage.reserveUniqueAccountId(fullId, currentUid);
+
+          // 別端末の古いプレイヤーデータ（sourceUid）をFirestoreから自動削除し、重複出品を解消
+          if (sourceUid && sourceUid !== currentUid && !String(sourceUid).startsWith('local_')) {
+            await this.storage.deletePlayerDocumentCompletely(sourceUid, fullId);
+          }
+
+          this.neighbors = await this.storage.fetchNeighbors(this.state.user.accountId);
 
           const transferModal = document.getElementById('transfer-modal-overlay');
           if (transferModal) transferModal.classList.add('hidden');
@@ -4793,7 +4918,7 @@ renderGuestbook() {
               this.updateUI();
               this.renderActivityLogs();
             }
-            this.neighbors = await this.storage.fetchNeighbors();
+            this.neighbors = await this.storage.fetchNeighbors(this.state && this.state.user ? this.state.user.accountId : null);
             this.renderNeighbors();
             this.renderFriendsTab();
             this.renderMasterAccountsList();
