@@ -223,6 +223,17 @@
           </p>
         </div>
 
+        <!-- ビーバー見た目プレビュー（毛色・体型リアルタイム反映） -->
+        <div class="bg-gradient-to-b from-sky-100 via-emerald-50 to-amber-100 border-2 border-amber-300 rounded-2xl p-2.5 flex flex-col items-center shadow-inner">
+          <div class="w-full flex items-center justify-between mb-1 px-1">
+            <span class="text-[11px] font-extrabold text-amber-950">ビーバーの見た目プレビュー</span>
+            <span class="text-[10px] font-bold text-emerald-800 bg-white/80 px-2 py-0.5 rounded-full border border-emerald-200">色・体型がリアルタイム反映</span>
+          </div>
+          <div class="w-full h-28 sm:h-32 rounded-xl overflow-hidden border border-amber-200/80 bg-sky-200/60 relative">
+            <canvas id="start-beaver-preview-canvas" class="block w-full h-full"></canvas>
+          </div>
+        </div>
+
         <!-- ビーバー毛色（10色）選択 -->
         <div class="bg-amber-50/80 border border-amber-200 rounded-2xl p-3">
           <div class="flex items-center justify-between mb-1.5">
@@ -1311,6 +1322,64 @@
           gain.connect(this.ctx.destination);
           osc.start(now);
           osc.stop(now + 0.26);
+        });
+      }
+
+      playTravelOut() {
+        if (this.muted) return;
+        this.init();
+        if (!this.ctx) return;
+        // よその川辺へおでかけする時の軽快で弾む上昇メロディ（カヌーの軽快なステップ音）
+        const steps = [
+          { freq: 392.00, time: 0.00, dur: 0.085, type: 'triangle', vol: 0.14 }, // G4
+          { freq: 493.88, time: 0.07, dur: 0.085, type: 'triangle', vol: 0.15 }, // B4
+          { freq: 587.33, time: 0.14, dur: 0.085, type: 'triangle', vol: 0.16 }, // D5
+          { freq: 783.99, time: 0.21, dur: 0.18,  type: 'sine',     vol: 0.17 }  // G5
+        ];
+        steps.forEach((s) => {
+          const now = this.ctx.currentTime + s.time;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = s.type;
+          osc.frequency.setValueAtTime(s.freq, now);
+          osc.frequency.exponentialRampToValueAtTime(s.freq * 1.03, now + s.dur);
+
+          gain.gain.setValueAtTime(s.vol, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + s.dur + 0.03);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + s.dur + 0.04);
+        });
+      }
+
+      playTravelReturn() {
+        if (this.muted) return;
+        this.init();
+        if (!this.ctx) return;
+        // 自宅の川辺へ戻るときの軽快でホッとするステップ音
+        const steps = [
+          { freq: 783.99, time: 0.00, dur: 0.08, type: 'triangle', vol: 0.14 }, // G5
+          { freq: 659.25, time: 0.065, dur: 0.08, type: 'triangle', vol: 0.14 }, // E5
+          { freq: 587.33, time: 0.13, dur: 0.08, type: 'triangle', vol: 0.15 }, // D5
+          { freq: 523.25, time: 0.195, dur: 0.19, type: 'sine',     vol: 0.16 }  // C5
+        ];
+        steps.forEach((s) => {
+          const now = this.ctx.currentTime + s.time;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = s.type;
+          osc.frequency.setValueAtTime(s.freq, now);
+          osc.frequency.exponentialRampToValueAtTime(s.freq * 0.99, now + s.dur);
+
+          gain.gain.setValueAtTime(s.vol, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + s.dur + 0.03);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + s.dur + 0.04);
         });
       }
     }
@@ -3139,6 +3208,7 @@ addActivityLog(text, icon = '#ico-sparkle', customTimestamp = Date.now(), extra 
         renderGroup('start-waist-options', 'waistSize');
         renderGroup('start-tail-length-options', 'tailLength');
         renderGroup('start-tail-size-options', 'tailSize');
+        this.drawStartPreview();
       }
 
       syncTopPageState() {
@@ -3631,7 +3701,7 @@ addActivityLog(text, icon = '#ico-sparkle', customTimestamp = Date.now(), extra 
         this.beaverAnim.xRatio = 0.45;
         this.beaverAnim.targetXRatio = 0.45;
         this.triggerBeaverAction('happy', 100);
-        this.sound.playPop(440);
+        this.sound.playTravelOut();
         this.updateUI();
         this.showToast(`${target.ownerName}さんの川辺に遊びに来ました！`);
       }
@@ -3641,7 +3711,7 @@ addActivityLog(text, icon = '#ico-sparkle', customTimestamp = Date.now(), extra 
           if (this.notifiedGiftToastIds) this.notifiedGiftToastIds.clear();
         this.beaverAnim.xRatio = 0.45;
         this.beaverAnim.targetXRatio = 0.45;
-        this.sound.playPop(340);
+        this.sound.playTravelReturn();
         this.updateUI();
         this.showToast('自分の川辺に帰ってきました');
       }
@@ -5264,10 +5334,110 @@ renderGuestbook() {
         try {
           this.updateAnimations();
           this.drawScene();
+          this.drawStartPreview();
         } catch (err) {
           console.error('描画ループエラー:', err);
         }
         requestAnimationFrame(() => this.loop());
+      }
+
+      drawStartPreview() {
+        const startOverlay = document.getElementById('start-screen-overlay');
+        if (!startOverlay || startOverlay.classList.contains('hidden')) return;
+        const pCanvas = document.getElementById('start-beaver-preview-canvas');
+        if (!pCanvas) return;
+
+        const rect = pCanvas.getBoundingClientRect();
+        const pw = Math.max(200, rect.width || pCanvas.clientWidth || 320);
+        const ph = Math.max(96, rect.height || pCanvas.clientHeight || 116);
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const targetW = Math.floor(pw * dpr);
+        const targetH = Math.floor(ph * dpr);
+        if (pCanvas.width !== targetW || pCanvas.height !== targetH) {
+          pCanvas.width = targetW;
+          pCanvas.height = targetH;
+        }
+
+        const pCtx = pCanvas.getContext('2d');
+        if (!pCtx) return;
+        pCtx.save();
+        pCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        pCtx.clearRect(0, 0, pw, ph);
+
+        const waterY = ph * 0.56;
+
+        // 空グラデーション
+        const skyGrad = pCtx.createLinearGradient(0, 0, 0, waterY);
+        skyGrad.addColorStop(0, '#bae6fd');
+        skyGrad.addColorStop(1, '#e0f2fe');
+        pCtx.fillStyle = skyGrad;
+        pCtx.fillRect(0, 0, pw, waterY);
+
+        // 背景の緑の丘
+        pCtx.fillStyle = '#86efac';
+        pCtx.beginPath();
+        pCtx.moveTo(0, waterY);
+        pCtx.quadraticCurveTo(pw * 0.3, ph * 0.25, pw * 0.65, waterY);
+        pCtx.fill();
+
+        pCtx.fillStyle = '#4ade80';
+        pCtx.beginPath();
+        pCtx.moveTo(pw * 0.35, waterY);
+        pCtx.quadraticCurveTo(pw * 0.78, ph * 0.22, pw, waterY);
+        pCtx.fill();
+
+        // 川面グラデーション
+        const waterGrad = pCtx.createLinearGradient(0, waterY, 0, ph);
+        waterGrad.addColorStop(0, '#38bdf8');
+        waterGrad.addColorStop(1, '#0284c7');
+        pCtx.fillStyle = waterGrad;
+        pCtx.fillRect(0, waterY, pw, ph - waterY);
+
+        // 水面のさざ波
+        pCtx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+        pCtx.lineWidth = 1.5;
+        for (let i = 0; i < 3; i++) {
+          const lx = ((i * 110 + this.time * 16) % (pw + 70)) - 35;
+          const ly = waterY + 12 + i * 13;
+          pCtx.beginPath();
+          pCtx.moveTo(lx, ly);
+          pCtx.lineTo(lx + 30, ly);
+          pCtx.stroke();
+        }
+
+        // 選択中の毛色・体型を反映したビーバーを描画（ぷかぷか揺れ）
+        const previewColor = (this.pendingBeaverCustom && this.pendingBeaverCustom.color) || '#9a5b25';
+        const previewBodyStyle = {
+          headSize: (this.pendingBeaverCustom && this.pendingBeaverCustom.headSize) || 'medium',
+          waistSize: (this.pendingBeaverCustom && this.pendingBeaverCustom.waistSize) || 'medium',
+          tailLength: (this.pendingBeaverCustom && this.pendingBeaverCustom.tailLength) || 'medium',
+          tailSize: (this.pendingBeaverCustom && this.pendingBeaverCustom.tailSize) || 'medium'
+        };
+
+        const prevFacing = this.beaverAnim.facing;
+        const prevFrontTimer = this.beaverAnim.frontLookTimer;
+        const prevAction = this.beaverAnim.action;
+        this.beaverAnim.facing = 1;
+        this.beaverAnim.frontLookTimer = 0;
+        this.beaverAnim.action = 'idle';
+
+        const bx = pw * 0.52;
+        const by = waterY + 4 + Math.sin(this.time * 2.4) * 2.2;
+        const previewScale = 1.05;
+
+        this.drawBeaver(pCtx, bx, by, previewScale, previewColor, 15, previewBodyStyle);
+
+        // 影
+        pCtx.fillStyle = 'rgba(14, 116, 144, 0.22)';
+        pCtx.beginPath();
+        pCtx.ellipse(bx, by + 18 * previewScale, 32 * previewScale, 6 * previewScale, 0, 0, Math.PI * 2);
+        pCtx.fill();
+
+        this.beaverAnim.facing = prevFacing;
+        this.beaverAnim.frontLookTimer = prevFrontTimer;
+        this.beaverAnim.action = prevAction;
+
+        pCtx.restore();
       }
 
       updateAnimations() {
