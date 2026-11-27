@@ -298,7 +298,7 @@
         <div class="bg-amber-50/80 border border-amber-200 rounded-2xl p-3">
           <div class="flex items-center justify-between mb-1.5">
             <span class="text-xs font-extrabold text-amber-950">ビーバーの毛色（10色）</span>
-            <span id="start-selected-color-name" class="text-[11px] font-extrabold text-amber-800">きつねブラウン</span>
+            <span id="start-selected-color-name" class="text-[11px] font-extrabold text-amber-800">ココアダーク</span>
           </div>
           <div id="start-color-palette" class="grid grid-cols-5 gap-1.5">
             <!-- JSで10色スウォッチを生成 -->
@@ -1527,7 +1527,7 @@
             damLevel: 1,
             damProgress: 20,
             totalFed: 0,
-            color: '#9a5b25',
+            color: '#5c3317',
             bodyStyle: {
               headSize: 'medium',
               waistSize: 'medium',
@@ -2330,8 +2330,8 @@
         this.manualZoomScale = null;
         this.currentZoomScale = 1.0;
         this.colorChoices = [
-          { id: 'fox_brown', name: 'きつねブラウン', hex: '#9a5b25' },
           { id: 'cocoa_dark', name: 'ココアダーク', hex: '#5c3317' },
+          { id: 'fox_brown', name: 'きつねブラウン', hex: '#9a5b25' },
           { id: 'caramel_latte', name: 'キャラメルラテ', hex: '#c28246' },
           { id: 'chestnut_red', name: 'くりレッド', hex: '#a84325' },
           { id: 'honey_gold', name: 'はちみつゴールド', hex: '#d99b38' },
@@ -2364,7 +2364,7 @@
           ]
         };
         this.pendingBeaverCustom = {
-          color: '#9a5b25',
+          color: '#5c3317',
           headSize: 'medium',
           waistSize: 'medium',
           tailLength: 'medium',
@@ -2419,7 +2419,7 @@
         this.secretsVisible = false;
         const savedBody = this.state.beaver.bodyStyle || {};
         this.pendingBeaverCustom = {
-          color: this.state.beaver.color || '#9a5b25',
+          color: this.state.beaver.color || '#5c3317',
           headSize: savedBody.headSize || 'medium',
           waistSize: savedBody.waistSize || 'medium',
           tailLength: savedBody.tailLength || 'medium',
@@ -5560,7 +5560,7 @@ renderGuestbook() {
         }
 
         // 選択中の毛色・体型・耳位置を確実に反映するため、アニメーション状態を退避して横向き描画を呼ぶ
-        const previewColor = (this.pendingBeaverCustom && this.pendingBeaverCustom.color) || '#9a5b25';
+        const previewColor = (this.pendingBeaverCustom && this.pendingBeaverCustom.color) || '#5c3317';
         const previewBodyStyle = {
           headSize: (this.pendingBeaverCustom && this.pendingBeaverCustom.headSize) || 'medium',
           waistSize: (this.pendingBeaverCustom && this.pendingBeaverCustom.waistSize) || 'medium',
