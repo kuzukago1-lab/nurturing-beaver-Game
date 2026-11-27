@@ -4349,18 +4349,24 @@ addActivityLog(text, icon = '#ico-sparkle', customTimestamp = Date.now(), extra 
 
         on('btn-reset-save', 'click', () => {
           const hasPass = /^\d{8}$/.test(String(this.state.user.transferCode || '').trim());
+          const warningNotice = [
+            '【⚠️ 重要：データ完全削除の注意】',
+            '初期化を実行すると、これまでの成長記録・流木・ツヤツヤのどんぐり・ダムLv・お気に入り・訪問ログ・お裾分け履歴がすべて完全削除され、二度と元に戻せません！',
+            hasPass
+              ? '本当に初期化する場合は、最初に設定した8桁のパスワードを正確に入力してください。'
+              : '本当に初期化してよろしいですか？（パスワード未設定のため、このまま決定すると即座に削除されます）'
+          ].join('\n');
+
           this.openModal({
-            title: 'セーブデータの初期化',
-            desc: hasPass
-              ? 'データを初期化するには、最初に設定した8桁のパスワードを入力してください。'
-              : 'これまでの成長記録やアイテムがすべてリセットされ、スタート登録画面に戻ります。よろしいですか？（パスワード未設定時は空欄のまま決定できます）',
+            title: '⚠️ セーブデータの完全初期化（復元不可）',
+            desc: warningNotice,
             showInput: false,
             showPasswordInput: true,
             onConfirm: async (_val, enteredPass) => {
               if (hasPass) {
                 const norm = String(enteredPass || '').replace(/[^0-9]/g, '').slice(0, 8);
                 if (norm !== String(this.state.user.transferCode).trim()) {
-                  this.showToast('8桁のパスワードが一致しないため、初期化をキャンセルしました');
+                  this.showToast('8桁のパスワードが一致しないため、初期化をキャンセルしました（データは保護されています）');
                   return;
                 }
               }
@@ -4380,16 +4386,27 @@ addActivityLog(text, icon = '#ico-sparkle', customTimestamp = Date.now(), extra 
                 tailSize: this.state.beaver.bodyStyle.tailSize
               };
               this.visitingTarget = null;
-          if (this.notifiedGiftToastIds) this.notifiedGiftToastIds.clear();
+              if (this.notifiedGiftToastIds) this.notifiedGiftToastIds.clear();
               this.syncStartScreenState();
               this.updateUI();
               this.renderActivityLogs();
               this.renderNeighbors();
               this.renderFriendsTab();
               this.renderGuestbook();
-              this.showToast('データを初期化しました');
+              this.showToast('データを完全初期化しました');
             }
           });
+
+          // 注意書きの改行反映と危険操作ボタンの視覚強調
+          const descEl = document.getElementById('modal-desc');
+          const confirmBtn = document.getElementById('modal-confirm');
+          if (descEl) {
+            descEl.className = 'text-xs sm:text-sm text-rose-900 bg-rose-50 border-2 border-rose-300 rounded-2xl p-3 mb-3 whitespace-pre-line font-bold leading-relaxed';
+          }
+          if (confirmBtn) {
+            confirmBtn.textContent = '完全削除して初期化する';
+            confirmBtn.className = 'px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs sm:text-sm font-extrabold shadow';
+          }
         });
 
         const rulesOverlay = document.getElementById('rules-modal-overlay');
