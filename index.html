@@ -347,7 +347,7 @@
       <!-- 右耳（目の高さ y=15.0 より上の頭頂部付近へ配置） -->
       <path d="M24.8 7.2C25.6 7.5 25.6 8.8 24.7 9.4L21.7 10.7C21.0 11.0 20.4 10.4 20.6 9.5L21.4 7.3C22.0 6.4 23.8 6.7 24.8 7.2Z" fill="#5c3317"/>
       <path d="M24.1 7.7L22.1 8.6L22.6 7.2C23.1 6.8 23.7 7.0 24.1 7.7Z" fill="#f9a8d4"/>
-      <path d="M8.5 11.5C10.5 7.2 21.5 7.2 23.5 11.5C26.2 14.5 26.5 20.5 23.2 24.2C20.5 26.8 11.5 26.8 8.8 24.2C5.5 20.5 5.8 14.5 8.5 11.5Z" fill="#9a5b25"/>
+      <path d="M8.5 11.5C10.5 7.2 21.5 7.2 23.5 11.5C26.2 14.5 26.5 20.5 23.2 24.2C20.5 26.8 11.5 26.8 8.8 24.2C5.5 20.5 5.8 14.5 8.5 11.5Z" fill="#5c3317"/>
       <ellipse cx="16" cy="20.4" rx="7.2" ry="4.8" fill="#fde68a"/>
       <rect x="14.0" y="21.6" width="1.7" height="4.9" rx="0.7" fill="#ffffff" stroke="#d6d3d1" stroke-width="0.5"/>
       <rect x="16.3" y="21.6" width="1.7" height="4.9" rx="0.7" fill="#ffffff" stroke="#d6d3d1" stroke-width="0.5"/>
@@ -2098,7 +2098,7 @@
               hunger: Number(prof.hunger ?? beaverObj.hunger ?? 20),
               mood: Number(prof.mood ?? beaverObj.mood ?? 80),
               wood: Number(prof.wood ?? userObj.wood ?? 0),
-              color: prof.color || beaverObj.color || '#9a5b25',
+              color: prof.color || beaverObj.color || '#5c3317',
               bodyStyle: prof.bodyStyle || beaverObj.bodyStyle || null,
               comment: 'オンライン川辺で活動中！',
               visitedToday: false,
@@ -2402,6 +2402,8 @@
         this.fireworkSparks = [];
         this.fireworkEndTime = 0;
         this.nextFireworkLaunchAt = 0;
+        this.levelUpBannerStartTime = 0;
+        this.levelUpBannerEndTime = 0;
         this.notifiedGiftToastIds = new Set();
         this.STAMINA_REGEN_MS = 3 * 60 * 1000;
         this.GAME_HOUR_MS = 2 * 60 * 1000;
@@ -3210,11 +3212,13 @@ addActivityLog(text, icon = '#ico-sparkle', customTimestamp = Date.now(), extra 
         };
         if (paletteEl) {
           paletteEl.innerHTML = '';
+          const activeHex = (this.pendingBeaverCustom && this.pendingBeaverCustom.color) || '#5c3317';
+          const matchedColor = this.colorChoices.find((item) => item.hex.toLowerCase() === activeHex.toLowerCase()) || this.colorChoices[0];
+          if (colorNameEl && matchedColor) {
+            colorNameEl.textContent = matchedColor.name;
+          }
           this.colorChoices.forEach((c) => {
-            const selected = this.pendingBeaverCustom.color.toLowerCase() === c.hex.toLowerCase();
-            if (selected && colorNameEl) {
-              colorNameEl.textContent = c.name;
-            }
+            const selected = matchedColor && matchedColor.hex.toLowerCase() === c.hex.toLowerCase();
             const btn = document.createElement('button');
             btn.type = 'button';
             btn.title = `${c.name}（${c.hex}）`;
@@ -4480,6 +4484,8 @@ addActivityLog(text, icon = '#ico-sparkle', customTimestamp = Date.now(), extra 
         const now = performance.now();
         this.fireworkEndTime = Math.max(this.fireworkEndTime, now + durationMs);
         this.nextFireworkLaunchAt = now;
+        this.levelUpBannerStartTime = now;
+        this.levelUpBannerEndTime = now + 3000;
         this.launchSingleFirework();
       }
 
@@ -4544,7 +4550,7 @@ addActivityLog(text, icon = '#ico-sparkle', customTimestamp = Date.now(), extra 
       }
 
       darkenHexColor(hex, amount = 0.25) {
-        const clean = String(hex || '#9a5b25').replace('#', '').trim();
+        const clean = String(hex || '#5c3317').replace('#', '').trim();
         if (clean.length !== 6) return '#5c3317';
         const r = Math.max(0, Math.floor(parseInt(clean.slice(0, 2), 16) * (1 - amount)));
         const g = Math.max(0, Math.floor(parseInt(clean.slice(2, 4), 16) * (1 - amount)));
@@ -4552,8 +4558,8 @@ addActivityLog(text, icon = '#ico-sparkle', customTimestamp = Date.now(), extra 
         return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
       }
 
-      createBeaverFaceSvg(furColor = '#9a5b25', bodyStyle = null, sizeClass = 'w-8 h-8') {
-        const safeColor = /^#[0-9a-fA-F]{6}$/.test(String(furColor || '').trim()) ? String(furColor).trim() : '#9a5b25';
+      createBeaverFaceSvg(furColor = '#5c3317', bodyStyle = null, sizeClass = 'w-8 h-8') {
+        const safeColor = /^#[0-9a-fA-F]{6}$/.test(String(furColor || '').trim()) ? String(furColor).trim() : '#5c3317';
         const earColor = this.darkenHexColor(safeColor, 0.28);
         const headId = (bodyStyle && bodyStyle.headSize) || 'medium';
         const headScale = headId === 'small' ? 0.88 : headId === 'large' ? 1.07 : 1.0;
@@ -4601,7 +4607,7 @@ addActivityLog(text, icon = '#ico-sparkle', customTimestamp = Date.now(), extra 
               damProgress: this.visitingTarget.damProgress,
               hunger: this.visitingTarget.hunger,
               mood: this.visitingTarget.mood,
-              color: this.visitingTarget.color || '#9a5b25',
+              color: this.visitingTarget.color || '#5c3317',
               bodyStyle: this.visitingTarget.bodyStyle || null
             }
           : this.state.beaver;
@@ -5863,6 +5869,105 @@ renderGuestbook() {
         });
 
         this.drawFireworks(ctx);
+        this.drawLevelUpBanner(ctx);
+      }
+
+      drawLevelUpBanner(ctx) {
+        const now = performance.now();
+        if (!this.levelUpBannerEndTime || now >= this.levelUpBannerEndTime) return;
+
+        const duration = Math.max(1, this.levelUpBannerEndTime - this.levelUpBannerStartTime);
+        const elapsed = Math.max(0, now - this.levelUpBannerStartTime);
+        const progress = Math.min(1, elapsed / duration);
+
+        // 最初の0.22秒で弾むように拡大し、最後の0.45秒でふわっとフェードアウト
+        let scale = 1.0;
+        let alpha = 1.0;
+        if (elapsed < 220) {
+          const t = elapsed / 220;
+          scale = 0.35 + Math.sin(t * Math.PI * 0.65) * 0.82;
+        } else if (elapsed < 340) {
+          const t = (elapsed - 220) / 120;
+          scale = 1.12 - t * 0.12;
+        } else {
+          scale = 1.0 + Math.sin(elapsed * 0.012) * 0.035;
+        }
+
+        if (elapsed > duration - 450) {
+          alpha = Math.max(0, (duration - elapsed) / 450);
+        }
+
+        const w = this.width || 400;
+        const h = this.height || 300;
+        const cx = w * 0.5;
+        const cy = h * 0.29 + Math.sin(elapsed * 0.008) * 3.5;
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.translate(cx, cy);
+        ctx.scale(scale, scale);
+
+        const labelText = 'レベルアップ！！';
+        const fontSize = Math.max(24, Math.min(44, Math.round(w * 0.082)));
+        ctx.font = `900 ${fontSize}px "Hiragino Maru Gothic ProN", "Rounded Mplus 1c", "Kosugi Maru", "Meiryo", sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        // 周りのキラキラ星・ハート風パーティクル装飾
+        const decoColors = ['#fde047', '#f472b6', '#38bdf8', '#a7f3d0', '#fb923c'];
+        for (let i = 0; i < 8; i++) {
+          const angle = (Math.PI * 2 * i) / 8 + elapsed * 0.0022;
+          const rx = Math.cos(angle) * (fontSize * 3.1);
+          const ry = Math.sin(angle) * (fontSize * 0.92);
+          const starR = 4.2 + Math.sin(elapsed * 0.015 + i) * 1.4;
+          ctx.save();
+          ctx.translate(rx, ry);
+          ctx.rotate(elapsed * 0.004 + i);
+          ctx.fillStyle = decoColors[i % decoColors.length];
+          ctx.beginPath();
+          for (let p = 0; p < 8; p++) {
+            const r = p % 2 === 0 ? starR : starR * 0.42;
+            const a = (Math.PI * p) / 4;
+            if (p === 0) ctx.moveTo(Math.cos(a) * r, Math.sin(a) * r);
+            else ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+          }
+          ctx.closePath();
+          ctx.fill();
+          ctx.restore();
+        }
+
+        // ドロップシャドウ＆外側の濃い縁取り（視認性アップ）
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
+        ctx.shadowColor = 'rgba(131, 24, 67, 0.55)';
+        ctx.shadowBlur = 10;
+        ctx.shadowOffsetY = 4;
+        ctx.lineWidth = Math.max(7, Math.round(fontSize * 0.24));
+        ctx.strokeStyle = '#9d174d';
+        ctx.strokeText(labelText, 0, 0);
+
+        // 内側の白いフチ取り（ステッカー風のかわいい縁）
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetY = 0;
+        ctx.lineWidth = Math.max(3.5, Math.round(fontSize * 0.12));
+        ctx.strokeStyle = '#ffffff';
+        ctx.strokeText(labelText, 0, 0);
+
+        // 鮮やかな虹色〜サンシャインピンクのグラデーション塗り
+        const textGrad = ctx.createLinearGradient(-fontSize * 2.6, -fontSize * 0.5, fontSize * 2.6, fontSize * 0.5);
+        textGrad.addColorStop(0, '#ff4d94');
+        textGrad.addColorStop(0.32, '#ff9900');
+        textGrad.addColorStop(0.65, '#ffe600');
+        textGrad.addColorStop(1, '#ff4da6');
+        ctx.fillStyle = textGrad;
+        ctx.fillText(labelText, 0, 0);
+
+        // 文字上部のツヤ（ハイライト）
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+        ctx.fillText(labelText, 0, -1.5);
+
+        ctx.restore();
       }
 
       drawFireworks(ctx) {
