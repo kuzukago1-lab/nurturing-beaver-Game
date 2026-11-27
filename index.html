@@ -459,7 +459,7 @@
         <div class="flex flex-wrap items-center justify-between gap-2">
           <!-- ビーバー名＆成長段階 -->
           <div class="flex items-center gap-2.5">
-            <div class="w-11 h-11 rounded-2xl bg-amber-100 border-2 border-amber-400 flex items-center justify-center shadow-inner">
+            <div id="ui-beaver-face-icon" class="w-11 h-11 rounded-2xl bg-amber-100 border-2 border-amber-400 flex items-center justify-center shadow-inner overflow-hidden shrink-0">
               <svg class="w-8 h-8"><use href="#ico-beaver"/></svg>
             </div>
             <div>
@@ -4524,6 +4524,51 @@ addActivityLog(text, icon = '#ico-sparkle', customTimestamp = Date.now(), extra 
         }
       }
 
+      darkenHexColor(hex, amount = 0.25) {
+        const clean = String(hex || '#9a5b25').replace('#', '').trim();
+        if (clean.length !== 6) return '#5c3317';
+        const r = Math.max(0, Math.floor(parseInt(clean.slice(0, 2), 16) * (1 - amount)));
+        const g = Math.max(0, Math.floor(parseInt(clean.slice(2, 4), 16) * (1 - amount)));
+        const b = Math.max(0, Math.floor(parseInt(clean.slice(4, 6), 16) * (1 - amount)));
+        return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+      }
+
+      createBeaverFaceSvg(furColor = '#9a5b25', bodyStyle = null, sizeClass = 'w-8 h-8') {
+        const safeColor = /^#[0-9a-fA-F]{6}$/.test(String(furColor || '').trim()) ? String(furColor).trim() : '#9a5b25';
+        const earColor = this.darkenHexColor(safeColor, 0.28);
+        const headId = (bodyStyle && bodyStyle.headSize) || 'medium';
+        const headScale = headId === 'small' ? 0.88 : headId === 'large' ? 1.07 : 1.0;
+        return `
+          <svg viewBox="0 0 32 32" class="${sizeClass} shrink-0" aria-hidden="true">
+            <g transform="translate(16,16) scale(${headScale}) translate(-16,-16)">
+              <path d="M5.2 14.3C4.4 14.5 4.3 15.6 5.1 16.0L8.2 16.8C8.9 17.0 9.4 16.4 9.2 15.6L8.4 13.8C7.8 13.0 6.2 13.5 5.2 14.3Z" fill="${earColor}"/>
+              <path d="M5.9 14.7L7.9 15.3L7.3 14.1C6.9 13.8 6.3 14.0 5.9 14.7Z" fill="#f9a8d4"/>
+              <path d="M26.8 14.3C27.6 14.5 27.7 15.6 26.9 16.0L23.8 16.8C23.1 17.0 22.6 16.4 22.8 15.6L23.6 13.8C24.2 13.0 25.8 13.5 26.8 14.3Z" fill="${earColor}"/>
+              <path d="M26.1 14.7L24.1 15.3L24.7 14.1C25.1 13.8 25.7 14.0 26.1 14.7Z" fill="#f9a8d4"/>
+              <path d="M8.5 11.5C10.5 7.2 21.5 7.2 23.5 11.5C26.2 14.5 26.5 20.5 23.2 24.2C20.5 26.8 11.5 26.8 8.8 24.2C5.5 20.5 5.8 14.5 8.5 11.5Z" fill="${safeColor}"/>
+              <ellipse cx="16" cy="20.4" rx="7.2" ry="4.8" fill="#fde68a"/>
+              <rect x="14.0" y="21.6" width="1.7" height="4.9" rx="0.7" fill="#ffffff" stroke="#d6d3d1" stroke-width="0.5"/>
+              <rect x="16.3" y="21.6" width="1.7" height="4.9" rx="0.7" fill="#ffffff" stroke="#d6d3d1" stroke-width="0.5"/>
+              <ellipse cx="16" cy="17.3" rx="3.1" ry="2.1" fill="#292524"/>
+              <g stroke="#451a03" stroke-width="0.9" stroke-linecap="round" fill="none">
+                <path d="M12.0 18.2Q8.2 17.3 4.8 17.8"/>
+                <path d="M11.8 19.4Q8.0 19.4 4.5 20.3"/>
+                <path d="M12.2 20.5Q8.6 21.4 5.4 22.6"/>
+                <path d="M20.0 18.2Q23.8 17.3 27.2 17.8"/>
+                <path d="M20.2 19.4Q24.0 19.4 27.5 20.3"/>
+                <path d="M19.8 20.5Q23.4 21.4 26.6 22.6"/>
+              </g>
+              <circle cx="11.3" cy="15.0" r="1.5" fill="#1c1917"/>
+              <circle cx="11.8" cy="14.5" r="0.5" fill="#ffffff"/>
+              <circle cx="20.7" cy="15.0" r="1.5" fill="#1c1917"/>
+              <circle cx="21.2" cy="14.5" r="0.5" fill="#ffffff"/>
+              <circle cx="7.4" cy="17.8" r="1.9" fill="#f43f5e" fill-opacity="0.32"/>
+              <circle cx="24.6" cy="17.8" r="1.9" fill="#f43f5e" fill-opacity="0.32"/>
+            </g>
+          </svg>
+        `;
+      }
+
       updateUI() {
         const isVisit = Boolean(this.visitingTarget);
         if (!isVisit && this.state && this.state.registered) {
@@ -4536,9 +4581,16 @@ addActivityLog(text, icon = '#ico-sparkle', customTimestamp = Date.now(), extra 
               damLevel: this.visitingTarget.damLevel,
               damProgress: this.visitingTarget.damProgress,
               hunger: this.visitingTarget.hunger,
-              mood: this.visitingTarget.mood
+              mood: this.visitingTarget.mood,
+              color: this.visitingTarget.color || '#9a5b25',
+              bodyStyle: this.visitingTarget.bodyStyle || null
             }
           : this.state.beaver;
+
+        const faceIconEl = document.getElementById('ui-beaver-face-icon');
+        if (faceIconEl) {
+          faceIconEl.innerHTML = this.createBeaverFaceSvg(activeBeaver.color, activeBeaver.bodyStyle, 'w-9 h-9');
+        }
 
         const stage = this.getGrowthStage(activeBeaver.damLevel);
 
@@ -4638,10 +4690,11 @@ addActivityLog(text, icon = '#ico-sparkle', customTimestamp = Date.now(), extra 
               ? 'bg-rose-50/70 border-rose-300 hover:border-rose-400'
               : 'bg-amber-50/80 border-amber-200 hover:border-amber-400'
           }`;
+          const neighborFaceSvg = this.createBeaverFaceSvg(n.color, n.bodyStyle, 'w-6 h-6');
           card.innerHTML = `
             <div class="min-w-0 pr-2">
               <div class="flex items-center gap-1.5 flex-wrap">
-                <svg class="w-4 h-4 shrink-0"><use href="#ico-beaver"/></svg>
+                <span class="w-7 h-7 rounded-xl bg-white border border-amber-300 flex items-center justify-center shrink-0 shadow-2xs">${neighborFaceSvg}</span>
                 <span class="font-extrabold text-sm text-amber-950 truncate">${n.beaverName}</span>
                 <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-200 text-amber-900">ダムLv.${n.damLevel} (${stage.label})</span>
                 ${isFav ? '<span class="text-[10px] font-extrabold px-1.5 py-0.5 rounded-full bg-rose-500 text-white">★お気に入り</span>' : ''}
@@ -4703,9 +4756,11 @@ addActivityLog(text, icon = '#ico-sparkle', customTimestamp = Date.now(), extra 
           const stage = this.getGrowthStage(n.damLevel);
           const item = document.createElement('div');
           item.className = 'p-3 rounded-2xl border bg-rose-50/70 border-rose-300 flex items-center justify-between gap-2';
+          const friendFaceSvg = this.createBeaverFaceSvg(n.color, n.bodyStyle, 'w-5 h-5');
           item.innerHTML = `
             <div class="min-w-0">
               <div class="flex items-center gap-1.5 flex-wrap">
+                <span class="w-6 h-6 rounded-lg bg-white border border-amber-300 flex items-center justify-center shrink-0">${friendFaceSvg}</span>
                 <span class="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-amber-100 text-amber-950">${n.accountId}</span>
                 <span class="text-xs sm:text-sm font-extrabold text-amber-950 truncate">${n.ownerName}</span>
                 <span class="text-[10px] font-extrabold px-1.5 py-0.2 rounded-full bg-rose-500 text-white">★お気に入り</span>
