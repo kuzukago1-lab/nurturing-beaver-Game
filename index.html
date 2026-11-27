@@ -2384,6 +2384,7 @@
           targetYOffset: 0,
           facing: 1,
           action: 'idle',
+          eatingItem: 'apple',
           actionTimer: 0,
           sleepHasClosedEyes: false,
           sleepStartedAtMs: 0,
@@ -3613,6 +3614,7 @@ addActivityLog(text, icon = '#ico-sparkle', customTimestamp = Date.now(), extra 
         const prevFullness = 100 - this.state.beaver.hunger;
         const prevMood = this.state.beaver.mood;
 
+        this.beaverAnim.eatingItem = type === 'branch' ? 'branch' : 'apple';
         if (type === 'apple') {
           this.state.user.coins -= 5;
           this.state.beaver.hunger = Math.max(0, this.state.beaver.hunger - 25);
@@ -6116,6 +6118,75 @@ renderGuestbook() {
         ctx.restore();
       }
 
+      drawBranchIllustration(ctx, x, y, scale = 1.0, rot = 0) {
+        ctx.save();
+        ctx.translate(x, y);
+        if (rot) ctx.rotate(rot);
+        ctx.scale(scale, scale);
+
+        // メインの小枝（しなりと節のある茶色い若枝）
+        ctx.strokeStyle = '#78350f';
+        ctx.lineWidth = 2.6;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(-10.5, 4.5);
+        ctx.quadraticCurveTo(-1.0, 0.5, 10.5, -5.5);
+        ctx.stroke();
+
+        // 樹皮の明るいハイライト
+        ctx.strokeStyle = '#b45309';
+        ctx.lineWidth = 1.0;
+        ctx.beginPath();
+        ctx.moveTo(-8.5, 3.3);
+        ctx.quadraticCurveTo(-0.5, -0.3, 8.5, -4.8);
+        ctx.stroke();
+
+        // 枝分かれの小枝
+        ctx.strokeStyle = '#78350f';
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        ctx.moveTo(-1.5, 0.6);
+        ctx.lineTo(-4.8, -4.8);
+        ctx.moveTo(4.2, -2.2);
+        ctx.lineTo(8.2, 1.2);
+        ctx.stroke();
+
+        // 若葉1（左上の若葉）
+        ctx.fillStyle = '#22c55e';
+        ctx.strokeStyle = '#15803d';
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.ellipse(-5.5, -6.2, 4.4, 2.3, -0.7, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // 若葉2（右上の新芽）
+        ctx.fillStyle = '#4ade80';
+        ctx.beginPath();
+        ctx.ellipse(9.8, -6.8, 4.0, 2.1, -0.35, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // 若葉3（右下の葉っぱ）
+        ctx.fillStyle = '#16a34a';
+        ctx.beginPath();
+        ctx.ellipse(8.8, 1.8, 3.8, 2.0, 0.45, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // 葉脈ハイライト
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)';
+        ctx.lineWidth = 0.7;
+        ctx.beginPath();
+        ctx.moveTo(-7.2, -7.4);
+        ctx.lineTo(-3.8, -5.0);
+        ctx.moveTo(8.0, -7.2);
+        ctx.lineTo(11.4, -6.2);
+        ctx.stroke();
+
+        ctx.restore();
+      }
+
       drawParticleVector(ctx, type, x, y, rot, alpha) {
         ctx.save();
         ctx.translate(x, y);
@@ -6643,7 +6714,12 @@ renderGuestbook() {
         }
 
         if (isEating) {
-          this.drawAppleIllustration(ctx, 15.2, 19.2 + Math.sin(this.time * 20) * 1.3, 5.2, -0.15);
+          const munchBob = Math.sin(this.time * 20) * 1.3;
+          if (this.beaverAnim.eatingItem === 'branch') {
+            this.drawBranchIllustration(ctx, 16.5, 17.5 + munchBob, 0.95, -0.25 + Math.sin(this.time * 20) * 0.08);
+          } else {
+            this.drawAppleIllustration(ctx, 15.2, 19.2 + munchBob, 5.2, -0.15);
+          }
         }
         ctx.restore();
 
@@ -6869,7 +6945,12 @@ renderGuestbook() {
         });
 
         if (isEating) {
-          this.drawAppleIllustration(ctx, 0, 19.0 + Math.sin(this.time * 20) * 1.2, 5.2, 0);
+          const munchBob = Math.sin(this.time * 20) * 1.2;
+          if (this.beaverAnim.eatingItem === 'branch') {
+            this.drawBranchIllustration(ctx, 0, 17.2 + munchBob, 1.0, Math.sin(this.time * 20) * 0.08);
+          } else {
+            this.drawAppleIllustration(ctx, 0, 19.0 + munchBob, 5.2, 0);
+          }
         }
         ctx.restore();
 
