@@ -6605,6 +6605,7 @@ renderGuestbook() {
           ctx.save();
           ctx.translate(ex, -8.5);
           ctx.rotate(dir * 0.35);
+          ctx.scale(0.6, 0.6); // 正面時の耳サイズを40%縮小
           ctx.fillStyle = '#5c3317';
           ctx.beginPath();
           ctx.ellipse(0, 0, 5.2, 3.6, 0, 0, Math.PI * 2);
