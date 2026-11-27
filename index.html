@@ -6151,8 +6151,9 @@ renderGuestbook() {
         const backFootKick = isSwimming
           ? Math.sin(this.time * 3.4 - 0.5) * 0.42
           : Math.sin(this.time * 3) * 0.05;
-        const backFootX = isSwimming ? -19.5 : -12;
-        const backFootY = isSwimming ? 8.5 + dolphinWave * 3.2 : 16;
+        // 泳いでいる時だけ後ろ足を尻尾の根本（-29 * waistScaleX）側へ寄せる
+        const backFootX = isSwimming ? -23.5 * metrics.waistScaleX : -12;
+        const backFootY = isSwimming ? 8.0 + dolphinWave * 3.2 : 16;
         ctx.translate(backFootX, backFootY);
         ctx.rotate(backFootKick);
         if (isSwimming) {
@@ -6251,8 +6252,9 @@ renderGuestbook() {
         const frontFootKick = isSwimming
           ? Math.sin(this.time * 3.4 - 0.5) * 0.42
           : -Math.sin(this.time * 3) * 0.05;
-        const frontFootX = isSwimming ? -16.5 : -9;
-        const frontFootY = isSwimming ? 9.5 + dolphinWave * 3.2 : 16.5;
+        // 泳いでいる時だけ手前側の後ろ足も尻尾の根本側へ寄せる
+        const frontFootX = isSwimming ? -20.5 * metrics.waistScaleX : -9;
+        const frontFootY = isSwimming ? 9.0 + dolphinWave * 3.2 : 16.5;
         ctx.translate(frontFootX, frontFootY);
         ctx.rotate(frontFootKick);
         if (isSwimming) {
