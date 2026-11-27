@@ -6151,7 +6151,6 @@ renderGuestbook() {
         const backFootKick = isSwimming
           ? Math.sin(this.time * 3.4 - 0.5) * 0.42
           : Math.sin(this.time * 3) * 0.05;
-        // 泳いでいる時だけ後ろ足を尻尾の根本（-29 * waistScaleX）側へ寄せる
         const backFootX = isSwimming ? -23.5 * metrics.waistScaleX : -12;
         const backFootY = isSwimming ? 8.0 + dolphinWave * 3.2 : 16;
         ctx.translate(backFootX, backFootY);
@@ -6252,7 +6251,6 @@ renderGuestbook() {
         const frontFootKick = isSwimming
           ? Math.sin(this.time * 3.4 - 0.5) * 0.42
           : -Math.sin(this.time * 3) * 0.05;
-        // 泳いでいる時だけ手前側の後ろ足も尻尾の根本側へ寄せる
         const frontFootX = isSwimming ? -20.5 * metrics.waistScaleX : -9;
         const frontFootY = isSwimming ? 9.0 + dolphinWave * 3.2 : 16.5;
         ctx.translate(frontFootX, frontFootY);
@@ -6315,40 +6313,20 @@ renderGuestbook() {
         ctx.scale(metrics.headScale, metrics.headScale);
         ctx.rotate(headNod + headTilt);
 
-        // 奥側の耳（少し後ろ・上方向）
+        // 1. 奥側の耳（頭頂部の後ろ側から少し覗く暗めの耳）
         ctx.save();
-        ctx.translate(-6.8, -14.8 + sadLevel * 0.8 + (isSwimming ? dolphinWave * 0.8 : 0));
-        ctx.rotate(-0.45 + sadLevel * 0.08 + (isSwimming ? -0.15 : 0));
-        ctx.fillStyle = furColor;
-        ctx.strokeStyle = '#3b1d0c';
+        ctx.translate(-8.5, -14.6 + sadLevel * 0.8 + (isSwimming ? dolphinWave * 0.8 : 0));
+        ctx.rotate(-0.48 + sadLevel * 0.08 + (isSwimming ? -0.12 : 0));
+        ctx.fillStyle = this.darkenHexColor(furColor, 0.28);
+        ctx.strokeStyle = '#291206';
         ctx.lineWidth = 1.2;
         ctx.beginPath();
-        ctx.ellipse(0, 0, 5.0, 3.2, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, 0, 4.4, 2.7, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
-        ctx.fillStyle = 'rgba(249, 168, 212, 0.72)';
-        ctx.beginPath();
-        ctx.ellipse(-0.3, 0.2, 2.5, 1.5, 0, 0, Math.PI * 2);
-        ctx.fill();
         ctx.restore();
 
-        // 手前側の耳（頭部の手前・上側にずらしてはっきり表示）
-        ctx.save();
-        ctx.translate(0.5, -15.2 + sadLevel * 0.8 + (isSwimming ? dolphinWave * 0.8 : 0));
-        ctx.rotate(-0.12 + sadLevel * 0.08 + (isSwimming ? -0.08 : 0));
-        ctx.fillStyle = furColor;
-        ctx.strokeStyle = '#291206';
-        ctx.lineWidth = 1.35;
-        ctx.beginPath();
-        ctx.ellipse(0, 0, 5.4, 3.5, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-        ctx.fillStyle = '#f9a8d4';
-        ctx.beginPath();
-        ctx.ellipse(0.2, 0.2, 2.9, 1.8, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-
+        // 2. 頭部ベース
         ctx.fillStyle = furColor;
         ctx.beginPath();
         ctx.moveTo(-12.5, -6.5);
@@ -6357,6 +6335,30 @@ renderGuestbook() {
         ctx.bezierCurveTo(6.5, 14.5, -9.5, 13.5, -12.5, 6.5);
         ctx.closePath();
         ctx.fill();
+
+        // 3. 手前の耳（耳約0.2個分だけ上に移動・付け根の下線はなし）
+        ctx.save();
+        ctx.translate(-5.5, -10.1 + sadLevel * 0.7 + (isSwimming ? dolphinWave * 0.8 : 0));
+        ctx.rotate(-0.22 + sadLevel * 0.06 + (isSwimming ? -0.06 : 0));
+        ctx.fillStyle = furColor;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 4.6, 3.2, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = '#291206';
+        ctx.lineWidth = 1.3;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 4.6, 3.2, 0, Math.PI * 1.05, Math.PI * 1.92);
+        ctx.stroke();
+
+        if (!isSwimming) {
+          ctx.fillStyle = '#f9a8d4';
+          ctx.beginPath();
+          ctx.ellipse(0.3, -0.1, 2.6, 1.7, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
 
         ctx.fillStyle = '#fde68a';
         ctx.beginPath();
