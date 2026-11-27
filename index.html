@@ -5412,7 +5412,19 @@ renderGuestbook() {
         const input = document.getElementById('modal-input');
         const passInput = document.getElementById('modal-password-input');
         document.getElementById('modal-title').textContent = title;
-        document.getElementById('modal-desc').textContent = desc;
+        const descEl = document.getElementById('modal-desc');
+        descEl.textContent = desc;
+
+        // ▼▼▼ ここから追加（別モーダルを開いたときに見た目とボタンを標準に戻す） ▼▼▼
+        const confirmBtn = document.getElementById('modal-confirm');
+        if (descEl) {
+          descEl.className = 'text-xs sm:text-sm text-amber-800 mb-3';
+        }
+        if (confirmBtn) {
+          confirmBtn.textContent = '決定する';
+          confirmBtn.className = 'px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs sm:text-sm font-extrabold shadow';
+        }
+        // ▲▲▲ ここまで追加 ▲▲▲
 
         if (showInput) {
           input.classList.remove('hidden');
